@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Home,
   Camera,
@@ -21,16 +21,26 @@ import {
   Maximize2,
   X,
   Bell,
-} from "lucide-react"
-import { LineChart, Line, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip } from "recharts"
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  ResponsiveContainer,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
 
 const AquaponicsApp = () => {
-  const [activeTab, setActiveTab] = useState("dashboard")
-  const [currentTime, setCurrentTime] = useState(new Date())
-  const [expandedAlert, setExpandedAlert] = useState(null)
-  const [showControlsModal, setShowControlsModal] = useState(false)
-  const [showCameraModal, setShowCameraModal] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [expandedAlert, setExpandedAlert] = useState(null);
+  const [showControlsModal, setShowControlsModal] = useState(false);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Real-time sensor data with more granular updates
   const [sensorData, setSensorData] = useState({
@@ -44,7 +54,7 @@ const AquaponicsApp = () => {
     nitrates: 5.2,
     dissolvedO2: 7.1,
     lightIntensity: 450,
-  })
+  });
 
   // System controls state
   const [controls, setControls] = useState({
@@ -52,7 +62,7 @@ const AquaponicsApp = () => {
     fan: true,
     phAdjustment: false,
     aerator: true,
-  })
+  });
 
   // Weekly growth data
   const weeklyGrowthData = [
@@ -63,7 +73,7 @@ const AquaponicsApp = () => {
     { day: "Fri", height: 15.6, leaves: 10, health: 92 },
     { day: "Sat", height: 16.2, leaves: 11, health: 93 },
     { day: "Sun", height: 17.1, leaves: 12, health: 94 },
-  ]
+  ];
 
   const sensorTrendData = [
     { time: "00:00", temp: 22.1, ph: 6.7, do: 7.0 },
@@ -72,22 +82,27 @@ const AquaponicsApp = () => {
     { time: "12:00", temp: 23.2, ph: 6.8, do: 6.9 },
     { time: "16:00", temp: 22.8, ph: 6.7, do: 7.3 },
     { time: "20:00", temp: 22.3, ph: 6.8, do: 7.2 },
-  ]
+  ];
 
   // Real-time updates
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentTime(new Date())
+      setCurrentTime(new Date());
       setSensorData((prev) => ({
         ...prev,
         waterTemp: Number.parseFloat((22 + Math.random() * 2).toFixed(1)),
         ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
         dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
-        waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
-      }))
-    }, 3000)
-    return () => clearInterval(interval)
-  }, [])
+        waterLevel: parseFloat(s
+          Math.min(
+            100,
+            Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)
+          ).toFixed(2)
+        ),
+      }));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Alert system with severity levels
   const alerts = [
@@ -118,19 +133,20 @@ const AquaponicsApp = () => {
       time: "1 hour ago",
       action: "Schedule",
     },
-  ]
+  ];
 
   // Threshold status helper
   const getThresholdStatus = (value, min, max) => {
-    if (value < min || value > max) return "critical"
-    if (value < min + (max - min) * 0.1 || value > max - (max - min) * 0.1) return "warning"
-    return "good"
-  }
+    if (value < min || value > max) return "critical";
+    if (value < min + (max - min) * 0.1 || value > max - (max - min) * 0.1)
+      return "warning";
+    return "good";
+  };
 
   // Enhanced Sensor Card with threshold visualization
   const SensorCard = ({ icon: Icon, title, value, unit, min, max, color }) => {
-    const status = getThresholdStatus(value, min, max)
-    const percentage = ((value - min) / (max - min)) * 100
+    const status = getThresholdStatus(value, min, max);
+    const percentage = ((value - min) / (max - min)) * 100;
 
     return (
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
@@ -143,7 +159,11 @@ const AquaponicsApp = () => {
           </div>
           <div
             className={`w-2.5 h-2.5 rounded-full ${
-              status === "good" ? "bg-emerald-500" : status === "warning" ? "bg-amber-500" : "bg-red-500"
+              status === "good"
+                ? "bg-emerald-500"
+                : status === "warning"
+                ? "bg-amber-500"
+                : "bg-red-500"
             } animate-pulse`}
           ></div>
         </div>
@@ -151,7 +171,9 @@ const AquaponicsApp = () => {
         <div className="mb-3">
           <div className="text-2xl font-bold text-gray-900">
             {value}
-            <span className="text-xs text-gray-500 ml-1 font-normal">{unit}</span>
+            <span className="text-xs text-gray-500 ml-1 font-normal">
+              {unit}
+            </span>
           </div>
           <div className="text-xs text-gray-500 mt-1">
             Range: {min}-{max}
@@ -163,25 +185,35 @@ const AquaponicsApp = () => {
         <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <div
             className={`h-full transition-all ${
-              status === "good" ? "bg-emerald-500" : status === "warning" ? "bg-amber-500" : "bg-red-500"
+              status === "good"
+                ? "bg-emerald-500"
+                : status === "warning"
+                ? "bg-amber-500"
+                : "bg-red-500"
             }`}
             style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
           ></div>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   // Control Toggle Component
   const ControlToggle = ({ label, icon: Icon, active, onChange }) => (
     <button
       onClick={() => onChange(!active)}
       className={`flex items-center justify-between w-full p-4 rounded-xl transition-all ${
-        active ? "bg-emerald-50 border border-emerald-200" : "bg-gray-50 border border-gray-200"
+        active
+          ? "bg-emerald-50 border border-emerald-200"
+          : "bg-gray-50 border border-gray-200"
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className={`p-2.5 rounded-lg ${active ? "bg-emerald-500" : "bg-gray-400"}`}>
+        <div
+          className={`p-2.5 rounded-lg ${
+            active ? "bg-emerald-500" : "bg-gray-400"
+          }`}
+        >
           <Icon className="w-5 h-5 text-white" />
         </div>
         <span className="font-semibold text-gray-900">{label}</span>
@@ -192,11 +224,13 @@ const AquaponicsApp = () => {
         } flex items-center p-1`}
       >
         <div
-          className={`w-5 h-5 bg-white rounded-full transition-transform ${active ? "translate-x-6" : "translate-x-0"}`}
+          className={`w-5 h-5 bg-white rounded-full transition-transform ${
+            active ? "translate-x-6" : "translate-x-0"
+          }`}
         ></div>
       </div>
     </button>
-  )
+  );
 
   // Dashboard View
   const DashboardView = () => (
@@ -209,7 +243,9 @@ const AquaponicsApp = () => {
             <p className="text-emerald-100 text-sm">Aquaponics Tower System</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold">{currentTime.toLocaleTimeString()}</div>
+            <div className="text-2xl font-bold">
+              {currentTime.toLocaleTimeString()}
+            </div>
             <div className="text-xs text-emerald-100 flex items-center justify-end gap-1 mt-1">
               <div className="w-2 h-2 bg-emerald-300 rounded-full animate-pulse"></div>
               Live
@@ -241,7 +277,9 @@ const AquaponicsApp = () => {
             <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
             <div>
               <div className="font-semibold text-gray-900">System Healthy</div>
-              <div className="text-xs text-gray-500">All sensors operational</div>
+              <div className="text-xs text-gray-500">
+                All sensors operational
+              </div>
             </div>
           </div>
           <button
@@ -255,7 +293,9 @@ const AquaponicsApp = () => {
 
       {/* Critical Sensors Grid */}
       <div>
-        <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Metrics</h2>
+        <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">
+          Critical Metrics
+        </h2>
         <div className="grid grid-cols-2 gap-3">
           <SensorCard
             icon={Thermometer}
@@ -298,7 +338,9 @@ const AquaponicsApp = () => {
 
       {/* Secondary Sensors */}
       <div>
-        <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">System Metrics</h2>
+        <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">
+          System Metrics
+        </h2>
         <div className="grid grid-cols-2 gap-3">
           <SensorCard
             icon={Waves}
@@ -380,7 +422,9 @@ const AquaponicsApp = () => {
               className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
                 expandedAlert === alert.id ? "bg-gray-50" : ""
               }`}
-              onClick={() => setExpandedAlert(expandedAlert === alert.id ? null : alert.id)}
+              onClick={() =>
+                setExpandedAlert(expandedAlert === alert.id ? null : alert.id)
+              }
             >
               <div className="flex items-start gap-3">
                 <div
@@ -388,21 +432,31 @@ const AquaponicsApp = () => {
                     alert.severity === "high"
                       ? "bg-red-100"
                       : alert.severity === "medium"
-                        ? "bg-amber-100"
-                        : "bg-emerald-100"
+                      ? "bg-amber-100"
+                      : "bg-emerald-100"
                   }`}
                 >
                   {alert.type === "warning" ? (
                     <AlertTriangle
-                      className={`w-4 h-4 ${alert.severity === "high" ? "text-red-600" : "text-amber-600"}`}
+                      className={`w-4 h-4 ${
+                        alert.severity === "high"
+                          ? "text-red-600"
+                          : "text-amber-600"
+                      }`}
                     />
                   ) : (
                     <CheckCircle className="w-4 h-4 text-emerald-600" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 text-sm">{alert.title}</div>
-                  {expandedAlert === alert.id && <div className="text-xs text-gray-600 mt-2">{alert.message}</div>}
+                  <div className="font-semibold text-gray-900 text-sm">
+                    {alert.title}
+                  </div>
+                  {expandedAlert === alert.id && (
+                    <div className="text-xs text-gray-600 mt-2">
+                      {alert.message}
+                    </div>
+                  )}
                   <div className="text-xs text-gray-500 mt-1">{alert.time}</div>
                 </div>
                 <ChevronDown
@@ -416,7 +470,7 @@ const AquaponicsApp = () => {
         </div>
       </div>
     </div>
-  )
+  );
 
   // Analytics View
   const AnalyticsView = () => (
@@ -444,7 +498,13 @@ const AquaponicsApp = () => {
                   color: "#fff",
                 }}
               />
-              <Area type="monotone" dataKey="height" stroke="#10b981" fillOpacity={1} fill="url(#colorHeight)" />
+              <Area
+                type="monotone"
+                dataKey="height"
+                stroke="#10b981"
+                fillOpacity={1}
+                fill="url(#colorHeight)"
+              />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -483,9 +543,30 @@ const AquaponicsApp = () => {
                   color: "#fff",
                 }}
               />
-              <Line type="monotone" dataKey="temp" stroke="#3b82f6" strokeWidth={2} dot={false} name="Temperature" />
-              <Line type="monotone" dataKey="ph" stroke="#8b5cf6" strokeWidth={2} dot={false} name="pH Level" />
-              <Line type="monotone" dataKey="do" stroke="#10b981" strokeWidth={2} dot={false} name="Dissolved O₂" />
+              <Line
+                type="monotone"
+                dataKey="temp"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={false}
+                name="Temperature"
+              />
+              <Line
+                type="monotone"
+                dataKey="ph"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                dot={false}
+                name="pH Level"
+              />
+              <Line
+                type="monotone"
+                dataKey="do"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={false}
+                name="Dissolved O₂"
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -499,7 +580,9 @@ const AquaponicsApp = () => {
             <span className="font-semibold text-gray-900">Fish Health</span>
           </div>
           <div className="text-2xl font-bold text-emerald-600">Excellent</div>
-          <div className="text-xs text-gray-500 mt-2">Ammonia: {sensorData.ammonia} ppm</div>
+          <div className="text-xs text-gray-500 mt-2">
+            Ammonia: {sensorData.ammonia} ppm
+          </div>
           <div className="w-full h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
             <div className="h-full w-4/5 bg-emerald-500"></div>
           </div>
@@ -518,7 +601,7 @@ const AquaponicsApp = () => {
         </div>
       </div>
     </div>
-  )
+  );
 
   // Camera View
   const CameraView = () => (
@@ -533,7 +616,9 @@ const AquaponicsApp = () => {
         </div>
         <div className="absolute top-4 right-4 bg-red-500 w-4 h-4 rounded-full animate-pulse"></div>
         <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded text-white">
-          <div className="text-sm font-semibold font-mono">{currentTime.toLocaleTimeString()}</div>
+          <div className="text-sm font-semibold font-mono">
+            {currentTime.toLocaleTimeString()}
+          </div>
           <div className="text-xs">1080p • Live</div>
         </div>
         <div className="absolute bottom-4 right-4 bg-emerald-600/90 px-3 py-2 rounded text-white">
@@ -543,7 +628,9 @@ const AquaponicsApp = () => {
 
       {/* AI Detection Results */}
       <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <h3 className="font-bold text-gray-900 mb-4">Plant Detection Results</h3>
+        <h3 className="font-bold text-gray-900 mb-4">
+          Plant Detection Results
+        </h3>
         <div className="space-y-3">
           {[
             { name: "Kale Plant #1", status: "Healthy", color: "emerald" },
@@ -561,12 +648,20 @@ const AquaponicsApp = () => {
             >
               <div className="flex items-center gap-3">
                 <div
-                  className={`w-3 h-3 rounded-full ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
+                  className={`w-3 h-3 rounded-full ${
+                    plant.color === "emerald"
+                      ? "bg-emerald-500"
+                      : "bg-amber-500"
+                  }`}
                 ></div>
                 <span className="font-medium text-gray-900">{plant.name}</span>
               </div>
               <span
-                className={`text-xs font-semibold ${plant.color === "emerald" ? "text-emerald-600" : "text-amber-600"}`}
+                className={`text-xs font-semibold ${
+                  plant.color === "emerald"
+                    ? "text-emerald-600"
+                    : "text-amber-600"
+                }`}
               >
                 {plant.status}
               </span>
@@ -594,7 +689,7 @@ const AquaponicsApp = () => {
         </div>
       </div>
     </div>
-  )
+  );
 
   // Settings View
   const SettingsView = () => (
@@ -646,7 +741,9 @@ const AquaponicsApp = () => {
               <div className="flex items-center gap-3">
                 <Clock className="w-4 h-4 text-gray-600" />
                 <div>
-                  <div className="font-semibold text-gray-900 text-sm">{preset.name}</div>
+                  <div className="font-semibold text-gray-900 text-sm">
+                    {preset.name}
+                  </div>
                   <div className="text-xs text-gray-500">{preset.time}</div>
                 </div>
               </div>
@@ -676,14 +773,18 @@ const AquaponicsApp = () => {
             { label: "Dissolved O₂ (mg/L)", min: "6.5", max: "8.0" },
           ].map((threshold, idx) => (
             <div key={idx}>
-              <label className="text-sm font-semibold text-gray-700 block mb-2">{threshold.label}</label>
+              <label className="text-sm font-semibold text-gray-700 block mb-2">
+                {threshold.label}
+              </label>
               <div className="grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
                 <input
                   type="number"
                   value={threshold.min}
                   className="w-full p-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
-                <span className="text-gray-500 font-semibold text-center">-</span>
+                <span className="text-gray-500 font-semibold text-center">
+                  -
+                </span>
                 <input
                   type="number"
                   value={threshold.max}
@@ -718,7 +819,7 @@ const AquaponicsApp = () => {
         </div>
       </div>
     </div>
-  )
+  );
 
   // Controls Modal
   const ControlsModal = () => (
@@ -769,7 +870,7 @@ const AquaponicsApp = () => {
         </button>
       </div>
     </div>
-  )
+  );
 
   // Camera Modal
   const CameraModal = () => (
@@ -788,13 +889,15 @@ const AquaponicsApp = () => {
           <div className="text-center text-white">
             <Camera className="w-20 h-20 mx-auto mb-4 opacity-50" />
             <div className="text-xl font-semibold">Live Tower Feed</div>
-            <div className="text-sm opacity-70 mt-2">Pinch to zoom • Swipe to pan</div>
+            <div className="text-sm opacity-70 mt-2">
+              Pinch to zoom • Swipe to pan
+            </div>
           </div>
         </div>
         <div className="absolute top-4 right-4 bg-red-500 w-4 h-4 rounded-full animate-pulse"></div>
       </div>
     </div>
-  )
+  );
 
   return (
     <div className="max-w-md mx-auto bg-gray-50 min-h-screen">
@@ -828,7 +931,9 @@ const AquaponicsApp = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${
-                activeTab === tab.id ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"
+                activeTab === tab.id
+                  ? "text-emerald-600 bg-emerald-50"
+                  : "text-gray-500 hover:text-gray-700"
               }`}
               aria-label={tab.label}
               aria-current={activeTab === tab.id ? "page" : undefined}
@@ -844,7 +949,7 @@ const AquaponicsApp = () => {
       {showControlsModal && <ControlsModal />}
       {showCameraModal && <CameraModal />}
     </div>
-  )
-}
+  );
+};
 
-export default AquaponicsApp
+export default AquaponicsApp;
