@@ -93,7 +93,7 @@ const AquaponicsApp = () => {
         waterTemp: Number.parseFloat((22 + Math.random() * 2).toFixed(1)),
         ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
         dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
-        waterLevel: parseFloat(s
+        waterLevel: Number(
           Math.min(
             100,
             Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)
