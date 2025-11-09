@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-/* Dark mode styles will be handled by the .dark class selector */
+@custom-variant dark (&:is(.dark *));
 
 :root {
   --background: oklch(1 0 0);
