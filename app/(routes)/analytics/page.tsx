@@ -1,11 +1,53 @@
 "use client"
 
 import { LayoutWrapper } from "@/app/components/LayoutWrapper"
+<<<<<<< HEAD
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip } from "recharts"
 import { Fish, Droplets } from "lucide-react"
 import { WEEKLY_GROWTH_DATA, SENSOR_TREND_DATA } from "@/lib/constants"
 
 export default function Analytics() {
+=======
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts"
+import { Fish, Droplets } from "lucide-react"
+import { WEEKLY_GROWTH_DATA, SENSOR_TREND_DATA } from "@/lib/constants"
+import { useState } from "react"
+
+export default function Analytics() {
+  const [selectedSensors, setSelectedSensors] = useState({
+    waterTemp: true,
+    ph: true,
+    dissolvedO2: true,
+    airTemp: false,
+    lightIntensity: false,
+    waterLevel: false,
+    waterFlow: false,
+    nitrates: false,
+    humidity: false,
+    ammonia: false,
+  })
+
+  const sensorConfig = [
+    { key: "waterTemp", name: "Water Temp", color: "#3b82f6" },
+    { key: "ph", name: "pH Level", color: "#8b5cf6" },
+    { key: "dissolvedO2", name: "Dissolved O₂", color: "#10b981" },
+    { key: "airTemp", name: "Air Temp", color: "#f59e0b" },
+    { key: "lightIntensity", name: "Light", color: "#eab308" },
+    { key: "waterLevel", name: "Water Level", color: "#06b6d4" },
+    { key: "waterFlow", name: "Flow Rate", color: "#6366f1" },
+    { key: "nitrates", name: "Nitrates", color: "#ec4899" },
+    { key: "humidity", name: "Humidity", color: "#14b8a6" },
+    { key: "ammonia", name: "Ammonia", color: "#f97316" },
+  ]
+
+  const toggleSensor = (key: string) => {
+    setSelectedSensors((prev) => ({
+      ...prev,
+      [key]: !prev[key as keyof typeof prev],
+    }))
+  }
+
+>>>>>>> 1c5daa3 (hydration error fixed)
   return (
     <LayoutWrapper>
       <div className="space-y-5 pb-24">
@@ -54,6 +96,7 @@ export default function Analytics() {
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Sensor Trends */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <h3 className="font-bold text-gray-900 mb-4">24-Hour Sensor Trends</h3>
@@ -63,12 +106,62 @@ export default function Analytics() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="time" stroke="#9ca3af" />
                 <YAxis stroke="#9ca3af" />
+=======
+        {/* Sensor Trends with All Sensors */}
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <h3 className="font-bold text-gray-900 mb-4">24-Hour Sensor Trends</h3>
+          
+          {/* Sensor Toggle Buttons */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {sensorConfig.map((sensor) => {
+              const isSelected = selectedSensors[sensor.key as keyof typeof selectedSensors]
+              return (
+                <button
+                  key={sensor.key}
+                  onClick={() => toggleSensor(sensor.key)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    isSelected
+                      ? "bg-white text-gray-900 border-2 shadow-sm"
+                      : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+                  }`}
+                  style={{
+                    borderColor: isSelected ? sensor.color : undefined,
+                  }}
+                >
+                  <span
+                    className="inline-block w-2 h-2 rounded-full mr-1.5"
+                    style={{ backgroundColor: sensor.color }}
+                  ></span>
+                  {sensor.name}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Chart */}
+          <div className="h-72">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={SENSOR_TREND_DATA} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis 
+                  dataKey="time" 
+                  stroke="#9ca3af" 
+                  style={{ fontSize: '11px' }}
+                  tick={{ fill: '#6b7280' }}
+                />
+                <YAxis 
+                  stroke="#9ca3af" 
+                  style={{ fontSize: '11px' }}
+                  tick={{ fill: '#6b7280' }}
+                />
+>>>>>>> 1c5daa3 (hydration error fixed)
                 <Tooltip
                   contentStyle={{
                     backgroundColor: "#1f2937",
                     border: "none",
                     borderRadius: "8px",
                     color: "#fff",
+<<<<<<< HEAD
                   }}
                 />
                 <Line type="monotone" dataKey="temp" stroke="#3b82f6" strokeWidth={2} dot={false} name="Temperature" />
@@ -77,6 +170,42 @@ export default function Analytics() {
               </LineChart>
             </ResponsiveContainer>
           </div>
+=======
+                    fontSize: "12px",
+                    padding: "8px 12px",
+                  }}
+                  labelStyle={{ fontWeight: 'bold', marginBottom: '4px' }}
+                />
+                <Legend 
+                  wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }}
+                  iconSize={10}
+                  iconType="line"
+                />
+                {sensorConfig.map((sensor) =>
+                  selectedSensors[sensor.key as keyof typeof selectedSensors] ? (
+                    <Line
+                      key={sensor.key}
+                      type="monotone"
+                      dataKey={sensor.key}
+                      stroke={sensor.color}
+                      strokeWidth={2.5}
+                      dot={false}
+                      name={sensor.name}
+                      activeDot={{ r: 5, strokeWidth: 0 }}
+                    />
+                  ) : null
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Quick Stats */}
+          <div className="mt-4 pt-4 border-t border-gray-100">
+            <div className="text-xs text-gray-500 text-center">
+              {Object.values(selectedSensors).filter(Boolean).length} of {sensorConfig.length} sensors displayed
+            </div>
+          </div>
+>>>>>>> 1c5daa3 (hydration error fixed)
         </div>
 
         {/* Health Metrics */}
@@ -108,4 +237,8 @@ export default function Analytics() {
       </div>
     </LayoutWrapper>
   )
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 1c5daa3 (hydration error fixed)

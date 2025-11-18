@@ -3,10 +3,25 @@
 import { LayoutWrapper } from "@/app/components/LayoutWrapper"
 import { Camera } from "lucide-react"
 import { PLANT_DETECTIONS } from "@/lib/constants"
+<<<<<<< HEAD
 import { useState } from "react"
 
 export default function CameraView() {
   const [currentTime] = useState(new Date())
+=======
+import { useState, useEffect } from "react"
+
+export default function CameraView() {
+  const [currentTime, setCurrentTime] = useState<Date | null>(null)
+
+  useEffect(() => {
+    setCurrentTime(new Date())
+    const interval = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [])
+>>>>>>> 1c5daa3 (hydration error fixed)
 
   return (
     <LayoutWrapper>
@@ -21,7 +36,13 @@ export default function CameraView() {
           </div>
           <div className="absolute top-4 right-4 bg-red-500 w-4 h-4 rounded-full animate-pulse"></div>
           <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded text-white">
+<<<<<<< HEAD
             <div className="text-sm font-semibold font-mono">{currentTime.toLocaleTimeString()}</div>
+=======
+            <div className="text-sm font-semibold font-mono">
+              {currentTime ? currentTime.toLocaleTimeString() : '--:--:--'}
+            </div>
+>>>>>>> 1c5daa3 (hydration error fixed)
             <div className="text-xs">1080p • Live</div>
           </div>
           <div className="absolute bottom-4 right-4 bg-emerald-600/90 px-3 py-2 rounded text-white">
@@ -79,4 +100,8 @@ export default function CameraView() {
       </div>
     </LayoutWrapper>
   )
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 1c5daa3 (hydration error fixed)

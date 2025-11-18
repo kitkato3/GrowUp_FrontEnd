@@ -1,20 +1,41 @@
 export const SENSOR_UPDATE_INTERVAL = 3000 // 3 seconds
 
 export const SENSOR_RANGES = {
+<<<<<<< HEAD
+=======
+  airTemp: { min: 18, max: 24 },
+>>>>>>> 1c5daa3 (hydration error fixed)
   waterTemp: { min: 20, max: 25 },
   ph: { min: 6.5, max: 7.5 },
   dissolvedO2: { min: 6.5, max: 8.0 },
   lightIntensity: { min: 300, max: 600 },
   waterLevel: { min: 70, max: 100 },
   waterFlow: { min: 0.8, max: 1.5 },
+<<<<<<< HEAD
+=======
+  nitrates: { min: 5, max: 150 },
+>>>>>>> 1c5daa3 (hydration error fixed)
   humidity: { min: 50, max: 80 },
   ammonia: { min: 0, max: 0.05 },
 }
 
 export const ALERT_THRESHOLD_DEFAULTS = [
+<<<<<<< HEAD
   { label: "pH Range", min: "6.0", max: "7.0" },
   { label: "Water Temp (°C)", min: "20", max: "25" },
   { label: "Dissolved O₂ (mg/L)", min: "6.5", max: "8.0" },
+=======
+  { label: "Air Temp (°C)", min: 18, max: 24 },
+  { label: "Water Temp (°C)", min: 20, max: 25 },
+  { label: "pH Level", min: 6.5, max: 7.5 },
+  { label: "Dissolved O₂ (mg/L)", min: 6.5, max: 8.0 },
+  { label: "Light Intensity (lux)", min: 300, max: 600 },
+  { label: "Water Level (%)", min: 70, max: 100 },
+  { label: "Water Flow (L/min)", min: 0.8, max: 1.5 },
+  { label: "Nitrates (mg/L)", min: 5, max: 150 },
+  { label: "Humidity (%)", min: 50, max: 80 },
+  { label: "Ammonia (mg/L)", min: 0, max: 0.05 },
+>>>>>>> 1c5daa3 (hydration error fixed)
 ]
 
 export const AUTOMATION_PRESETS = [
@@ -41,12 +62,93 @@ export const WEEKLY_GROWTH_DATA = [
 ]
 
 export const SENSOR_TREND_DATA = [
+<<<<<<< HEAD
   { time: "00:00", temp: 22.1, ph: 6.7, do: 7.0 },
   { time: "04:00", temp: 21.8, ph: 6.8, do: 7.2 },
   { time: "08:00", temp: 22.5, ph: 6.9, do: 7.1 },
   { time: "12:00", temp: 23.2, ph: 6.8, do: 6.9 },
   { time: "16:00", temp: 22.8, ph: 6.7, do: 7.3 },
   { time: "20:00", temp: 22.3, ph: 6.8, do: 7.2 },
+=======
+  {
+    time: "00:00",
+    airTemp: 22.1,
+    waterTemp: 21.0,
+    ph: 6.7,
+    dissolvedO2: 7.0,
+    lightIntensity: 350,
+    waterLevel: 85,
+    waterFlow: 1.2,
+    nitrates: 12,
+    humidity: 65,
+    ammonia: 0.01,
+  },
+  {
+    time: "04:00",
+    airTemp: 21.8,
+    waterTemp: 21.2,
+    ph: 6.8,
+    dissolvedO2: 7.2,
+    lightIntensity: 300,
+    waterLevel: 84,
+    waterFlow: 1.1,
+    nitrates: 13,
+    humidity: 64,
+    ammonia: 0.01,
+  },
+  {
+    time: "08:00",
+    airTemp: 22.5,
+    waterTemp: 22.0,
+    ph: 6.9,
+    dissolvedO2: 7.1,
+    lightIntensity: 400,
+    waterLevel: 86,
+    waterFlow: 1.3,
+    nitrates: 14,
+    humidity: 66,
+    ammonia: 0.02,
+  },
+  {
+    time: "12:00",
+    airTemp: 23.2,
+    waterTemp: 22.5,
+    ph: 6.8,
+    dissolvedO2: 6.9,
+    lightIntensity: 500,
+    waterLevel: 87,
+    waterFlow: 1.4,
+    nitrates: 15,
+    humidity: 67,
+    ammonia: 0.02,
+  },
+  {
+    time: "16:00",
+    airTemp: 22.8,
+    waterTemp: 22.3,
+    ph: 6.7,
+    dissolvedO2: 7.3,
+    lightIntensity: 450,
+    waterLevel: 85,
+    waterFlow: 1.2,
+    nitrates: 13,
+    humidity: 66,
+    ammonia: 0.01,
+  },
+  {
+    time: "20:00",
+    airTemp: 22.3,
+    waterTemp: 22.1,
+    ph: 6.8,
+    dissolvedO2: 7.2,
+    lightIntensity: 350,
+    waterLevel: 84,
+    waterFlow: 1.1,
+    nitrates: 12,
+    humidity: 65,
+    ammonia: 0.01,
+  },
+>>>>>>> 1c5daa3 (hydration error fixed)
 ]
 
 export const INITIAL_SENSOR_DATA = {
@@ -97,4 +199,8 @@ export const ALERTS_DATA = [
     time: "1 hour ago",
     action: "Schedule",
   },
+<<<<<<< HEAD
 ]
+=======
+]
+>>>>>>> 1c5daa3 (hydration error fixed)
