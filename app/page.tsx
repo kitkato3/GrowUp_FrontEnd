@@ -27,10 +27,9 @@ import { LineChart, Line, AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Ca
 const AquaponicsApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard")
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [expandedAlert, setExpandedAlert] = useState(null)
+  const [expandedAlert, setExpandedAlert] = useState<number | null>(null)
   const [showControlsModal, setShowControlsModal] = useState(false)
   const [showCameraModal, setShowCameraModal] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // Real-time sensor data with more granular updates
   const [sensorData, setSensorData] = useState({
@@ -121,14 +120,22 @@ const AquaponicsApp = () => {
   ]
 
   // Threshold status helper
-  const getThresholdStatus = (value, min, max) => {
+  const getThresholdStatus = (value: number, min: number, max: number) => {
     if (value < min || value > max) return "critical"
     if (value < min + (max - min) * 0.1 || value > max - (max - min) * 0.1) return "warning"
     return "good"
   }
 
   // Enhanced Sensor Card with threshold visualization
-  const SensorCard = ({ icon: Icon, title, value, unit, min, max, color }) => {
+  const SensorCard = ({ icon: Icon, title, value, unit, min, max, color }: {
+    icon: React.ElementType;
+    title: string;
+    value: number;
+    unit: string;
+    min: number;
+    max: number;
+    color: string;
+  }) => {
     const status = getThresholdStatus(value, min, max)
     const percentage = ((value - min) / (max - min)) * 100
 
@@ -142,9 +149,8 @@ const AquaponicsApp = () => {
             <span className="text-sm font-semibold text-gray-700">{title}</span>
           </div>
           <div
-            className={`w-2.5 h-2.5 rounded-full ${
-              status === "good" ? "bg-emerald-500" : status === "warning" ? "bg-amber-500" : "bg-red-500"
-            } animate-pulse`}
+            className={`w-2.5 h-2.5 rounded-full ${status === "good" ? "bg-emerald-500" : status === "warning" ? "bg-amber-500" : "bg-red-500"
+              } animate-pulse`}
           ></div>
         </div>
 
@@ -162,9 +168,8 @@ const AquaponicsApp = () => {
         {/* Threshold bar */}
         <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className={`h-full transition-all ${
-              status === "good" ? "bg-emerald-500" : status === "warning" ? "bg-amber-500" : "bg-red-500"
-            }`}
+            className={`h-full transition-all ${status === "good" ? "bg-emerald-500" : status === "warning" ? "bg-amber-500" : "bg-red-500"
+              }`}
             style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
           ></div>
         </div>
@@ -173,12 +178,16 @@ const AquaponicsApp = () => {
   }
 
   // Control Toggle Component
-  const ControlToggle = ({ label, icon: Icon, active, onChange }) => (
+  const ControlToggle = ({ label, icon: Icon, active, onChange }: {
+    label: string;
+    icon: React.ElementType;
+    active: boolean;
+    onChange: (value: boolean) => void;
+  }) => (
     <button
       onClick={() => onChange(!active)}
-      className={`flex items-center justify-between w-full p-4 rounded-xl transition-all ${
-        active ? "bg-emerald-50 border border-emerald-200" : "bg-gray-50 border border-gray-200"
-      }`}
+      className={`flex items-center justify-between w-full p-4 rounded-xl transition-all ${active ? "bg-emerald-50 border border-emerald-200" : "bg-gray-50 border border-gray-200"
+        }`}
     >
       <div className="flex items-center gap-3">
         <div className={`p-2.5 rounded-lg ${active ? "bg-emerald-500" : "bg-gray-400"}`}>
@@ -187,9 +196,8 @@ const AquaponicsApp = () => {
         <span className="font-semibold text-gray-900">{label}</span>
       </div>
       <div
-        className={`w-12 h-6 rounded-full transition-all ${
-          active ? "bg-emerald-500" : "bg-gray-300"
-        } flex items-center p-1`}
+        className={`w-12 h-6 rounded-full transition-all ${active ? "bg-emerald-500" : "bg-gray-300"
+          } flex items-center p-1`}
       >
         <div
           className={`w-5 h-5 bg-white rounded-full transition-transform ${active ? "translate-x-6" : "translate-x-0"}`}
@@ -377,20 +385,18 @@ const AquaponicsApp = () => {
           {alerts.map((alert) => (
             <div
               key={alert.id}
-              className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                expandedAlert === alert.id ? "bg-gray-50" : ""
-              }`}
+              className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${expandedAlert === alert.id ? "bg-gray-50" : ""
+                }`}
               onClick={() => setExpandedAlert(expandedAlert === alert.id ? null : alert.id)}
             >
               <div className="flex items-start gap-3">
                 <div
-                  className={`p-2 rounded-lg flex-shrink-0 ${
-                    alert.severity === "high"
+                  className={`p-2 rounded-lg flex-shrink-0 ${alert.severity === "high"
                       ? "bg-red-100"
                       : alert.severity === "medium"
                         ? "bg-amber-100"
                         : "bg-emerald-100"
-                  }`}
+                    }`}
                 >
                   {alert.type === "warning" ? (
                     <AlertTriangle
@@ -406,9 +412,8 @@ const AquaponicsApp = () => {
                   <div className="text-xs text-gray-500 mt-1">{alert.time}</div>
                 </div>
                 <ChevronDown
-                  className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${
-                    expandedAlert === alert.id ? "rotate-180" : ""
-                  }`}
+                  className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${expandedAlert === alert.id ? "rotate-180" : ""
+                    }`}
                 />
               </div>
             </div>
@@ -553,11 +558,10 @@ const AquaponicsApp = () => {
           ].map((plant, idx) => (
             <div
               key={idx}
-              className={`flex items-center justify-between p-3 rounded-lg ${
-                plant.color === "emerald"
+              className={`flex items-center justify-between p-3 rounded-lg ${plant.color === "emerald"
                   ? "bg-emerald-50 border border-emerald-200"
                   : "bg-amber-50 border border-amber-200"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
                 <div
@@ -607,25 +611,25 @@ const AquaponicsApp = () => {
             label="Submersible Pump"
             icon={Waves}
             active={controls.pump}
-            onChange={(val) => setControls({ ...controls, pump: val })}
+            onChange={(val: boolean) => setControls({ ...controls, pump: val })}
           />
           <ControlToggle
             label="DC Fan"
             icon={Wind}
             active={controls.fan}
-            onChange={(val) => setControls({ ...controls, fan: val })}
+            onChange={(val: boolean) => setControls({ ...controls, fan: val })}
           />
           <ControlToggle
             label="pH Adjustment"
             icon={Droplets}
             active={controls.phAdjustment}
-            onChange={(val) => setControls({ ...controls, phAdjustment: val })}
+            onChange={(val: boolean) => setControls({ ...controls, phAdjustment: val })}
           />
           <ControlToggle
             label="Aerator"
             icon={Activity}
             active={controls.aerator}
-            onChange={(val) => setControls({ ...controls, aerator: val })}
+            onChange={(val: boolean) => setControls({ ...controls, aerator: val })}
           />
         </div>
       </div>
@@ -651,14 +655,12 @@ const AquaponicsApp = () => {
                 </div>
               </div>
               <div
-                className={`w-10 h-6 rounded-full transition-all ${
-                  preset.active ? "bg-emerald-500" : "bg-gray-300"
-                } flex items-center p-1`}
+                className={`w-10 h-6 rounded-full transition-all ${preset.active ? "bg-emerald-500" : "bg-gray-300"
+                  } flex items-center p-1`}
               >
                 <div
-                  className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                    preset.active ? "translate-x-4" : "translate-x-0"
-                  }`}
+                  className={`w-4 h-4 bg-white rounded-full transition-transform ${preset.active ? "translate-x-4" : "translate-x-0"
+                    }`}
                 ></div>
               </div>
             </div>
@@ -827,9 +829,8 @@ const AquaponicsApp = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${
-                activeTab === tab.id ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"
-              }`}
+              className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${activeTab === tab.id ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"
+                }`}
               aria-label={tab.label}
               aria-current={activeTab === tab.id ? "page" : undefined}
             >
