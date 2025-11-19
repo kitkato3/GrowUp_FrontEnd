@@ -1,53 +1,201 @@
-"use client"
+import React, { useState, useEffect } from "react"
+import { Thermometer, Droplets, Activity, Zap, Waves, Gauge, Wind, Fish, ChevronDown, AlertTriangle, CheckCircle, Camera, Maximize2, Bell, X, Info, Clock } from "lucide-react"
 
-import { useState, useEffect } from "react"
-import {
-  Thermometer,
-  Droplets,
-  Activity,
-  Zap,
-  Waves,
-  Gauge,
-  Wind,
-  Fish,
-  ChevronDown,
-  AlertTriangle,
-  CheckCircle,
-  Camera,
-  Maximize2,
-  Bell,
-  X,
-} from "lucide-react"
-import { SensorCard } from "./components/SensorCard"
-import { ControlToggle } from "./components/ControlToggle"
-import { LayoutWrapper } from "@/app/components/LayoutWrapper"
-import { INITIAL_SENSOR_DATA, INITIAL_CONTROLS, ALERTS_DATA, SENSOR_RANGES } from "@/lib/constants"
-import type { SensorData, SystemControls, AlertNotification } from "@/lib/types"
+// --- TYPE DEFINITIONS ---
+
+interface SensorCardProps {
+  icon: React.ElementType;
+  title: string;
+  value: number;
+  unit: string;
+  min: number;
+  max: number;
+  color: string;
+}
+
+interface ControlToggleProps {
+  label: string;
+  icon: React.ElementType;
+  active: boolean;
+  onChange: (val: boolean) => void;
+}
+
+interface SensorDataState {
+  waterTemp: number;
+  ph: number;
+  dissolvedO2: number;
+  waterLevel: number;
+  waterFlow: number;
+  humidity: number;
+  ammonia: number;
+  lightIntensity: number;
+}
+
+interface ControlState {
+  pump: boolean;
+  fan: boolean;
+  phAdjustment: boolean;
+  aerator: boolean;
+}
+
+interface AlertData {
+  id: number;
+  type: "warning" | "info";
+  severity: "low" | "medium" | "high";
+  title: string;
+  message: string;
+  time: string;
+}
+
+// --- MOCK DATA ---
+const ALERTS_DATA: AlertData[] = [
+  {
+    id: 1,
+    type: "warning",
+    severity: "medium",
+    title: "pH Level Slightly Low",
+    message: "Current pH is 6.2. Optimal range is 6.5-7.0. pH adjustment system has been automatically activated to restore balance.",
+    time: "5 minutes ago"
+  },
+  {
+    id: 2,
+    type: "info",
+    severity: "low",
+    title: "System Running Optimally",
+    message: "All parameters are within ideal ranges. Water circulation is efficient and all sensors are functioning normally.",
+    time: "15 minutes ago"
+  },
+  {
+    id: 3,
+    type: "warning",
+    severity: "medium",
+    title: "Maintenance Due Soon",
+    message: "Filter cleaning scheduled in 3 days. Please ensure maintenance supplies are available.",
+    time: "2 hours ago"
+  },
+  {
+    id: 4,
+    type: "info",
+    severity: "low",
+    title: "Water Level Refilled",
+    message: "Water level successfully restored to 85% after automatic refill. System is stable.",
+    time: "4 hours ago"
+  },
+  {
+    id: 5,
+    type: "warning",
+    severity: "high",
+    title: "Check Dissolved Oxygen",
+    message: "DO level at 4.8 mg/L, below optimal range (5-8 mg/L). Aerator running at full capacity. Monitor closely.",
+    time: "6 hours ago"
+  }
+]
+
+// --- MOCK COMPONENTS (PROPS TYPED) ---
+
+const SensorCard: React.FC<SensorCardProps> = ({ icon: Icon, title, value, unit, min, max, color }) => {
+  const percentage = ((value - min) / (max - min)) * 100
+  const isInRange = value >= min && value <= max
+
+  return (
+    <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+      <div className="flex items-center justify-between mb-2">
+        <div className={`p-2 rounded-lg ${color} bg-opacity-10`}>
+          <Icon className={`w-4 h-4 ${color.replace('bg-', 'text-')}`} />
+        </div>
+        {!isInRange && <AlertTriangle className="w-4 h-4 text-amber-500" />}
+      </div>
+      <div className="text-2xl font-bold text-gray-900">{value}{unit}</div>
+      <div className="text-xs text-gray-500 mt-1">{title}</div>
+      <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className={`h-full ${color} transition-all duration-300`}
+          style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+const ControlToggle: React.FC<ControlToggleProps> = ({ label, icon: Icon, active, onChange }) => (
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+    <div className="flex items-center gap-3">
+      <div className={`p-2 rounded-lg ${active ? 'bg-emerald-100' : 'bg-gray-200'}`}>
+        <Icon className={`w-5 h-5 ${active ? 'text-emerald-600' : 'text-gray-400'}`} />
+      </div>
+      <span className="font-medium text-gray-900">{label}</span>
+    </div>
+    <button
+      onClick={() => onChange(!active)}
+      className={`w-12 h-6 rounded-full transition-colors ${active ? 'bg-emerald-500' : 'bg-gray-300'
+        }`}
+    >
+      <div className={`w-5 h-5 bg-white rounded-full transition-transform ${active ? 'translate-x-6' : 'translate-x-0.5'
+        }`} />
+    </button>
+  </div>
+)
+
+const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="min-h-screen bg-gray-50 p-4 max-w-md mx-auto">
+    {children}
+  </div>
+)
+
+// --- MAIN DASHBOARD COMPONENT ---
 
 export default function Dashboard() {
-  const [currentTime, setCurrentTime] = useState(new Date())
-  const [expandedAlert, setExpandedAlert] = useState<number | null>(null)
-  const [showControlsModal, setShowControlsModal] = useState(false)
-  const [showCameraModal, setShowCameraModal] = useState(false)
-  const [sensorData, setSensorData] = useState<SensorData>(INITIAL_SENSOR_DATA)
-  const [controls, setControls] = useState<SystemControls>(INITIAL_CONTROLS)
-  const alerts: AlertNotification[] = ALERTS_DATA
+  // State variables explicitly typed
+  const [currentTime, setCurrentTime] = useState<Date>(new Date())
 
+  // Fixes the error in setExpandedAlert: allows null or number
+  const [expandedAlert, setExpandedAlert] = useState<number | null>(null)
+
+  const [showControlsModal, setShowControlsModal] = useState<boolean>(false)
+  const [showCameraModal, setShowCameraModal] = useState<boolean>(false)
+
+  const [sensorData, setSensorData] = useState<SensorDataState>({
+    waterTemp: 23.2,
+    ph: 6.8,
+    dissolvedO2: 7.2,
+    waterLevel: 85,
+    waterFlow: 4.5,
+    humidity: 65,
+    ammonia: 0.3,
+    lightIntensity: 15000
+  })
+
+  const [controls, setControls] = useState<ControlState>({
+    pump: true,
+    fan: false,
+    phAdjustment: true,
+    aerator: true
+  })
+  const alerts = ALERTS_DATA
+
+  // Clock and data simulation interval
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date())
       setSensorData((prev) => ({
         ...prev,
+        // Ensure all values remain numbers after calculation
         waterTemp: Number.parseFloat((22 + Math.random() * 2).toFixed(1)),
         ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
         dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
+        // Ensure waterLevel manipulation is correctly typed
         waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
       }))
     }, 3000)
     return () => clearInterval(interval)
   }, [])
 
-  const ControlsModal = () => (
+  const handleControlChange = (key: keyof ControlState, val: boolean) => {
+    setControls({ ...controls, [key]: val });
+  }
+
+  // Control modal component definition
+  const ControlsModal: React.FC = () => (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
       <div className="w-full bg-white rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
@@ -64,25 +212,25 @@ export default function Dashboard() {
             label="Submersible Pump"
             icon={Waves}
             active={controls.pump}
-            onChange={(val) => setControls({ ...controls, pump: val })}
+            onChange={(val: boolean) => handleControlChange('pump', val)}
           />
           <ControlToggle
             label="DC Fan"
             icon={Wind}
             active={controls.fan}
-            onChange={(val) => setControls({ ...controls, fan: val })}
+            onChange={(val: boolean) => handleControlChange('fan', val)}
           />
           <ControlToggle
             label="pH Adjustment"
             icon={Droplets}
             active={controls.phAdjustment}
-            onChange={(val) => setControls({ ...controls, phAdjustment: val })}
+            onChange={(val: boolean) => handleControlChange('phAdjustment', val)}
           />
           <ControlToggle
             label="Aerator"
             icon={Activity}
             active={controls.aerator}
-            onChange={(val) => setControls({ ...controls, aerator: val })}
+            onChange={(val: boolean) => handleControlChange('aerator', val)}
           />
         </div>
         <button
@@ -95,7 +243,8 @@ export default function Dashboard() {
     </div>
   )
 
-  const CameraModal = () => (
+  // Camera modal component definition
+  const CameraModal: React.FC = () => (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       <div className="flex items-center justify-between p-4 bg-black/80">
         <h2 className="text-white font-bold">Live Camera Feed</h2>
@@ -173,92 +322,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Critical Sensors Grid */}
-        <div>
-          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Metrics</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <SensorCard
-              icon={Thermometer}
-              title="Water Temp"
-              value={sensorData.waterTemp}
-              unit="°C"
-              min={SENSOR_RANGES.waterTemp.min}
-              max={SENSOR_RANGES.waterTemp.max}
-              color="bg-blue-500"
-            />
-            <SensorCard
-              icon={Droplets}
-              title="pH Level"
-              value={sensorData.ph}
-              unit=""
-              min={SENSOR_RANGES.ph.min}
-              max={SENSOR_RANGES.ph.max}
-              color="bg-purple-500"
-            />
-            <SensorCard
-              icon={Activity}
-              title="Dissolved O₂"
-              value={sensorData.dissolvedO2}
-              unit="mg/L"
-              min={SENSOR_RANGES.dissolvedO2.min}
-              max={SENSOR_RANGES.dissolvedO2.max}
-              color="bg-green-500"
-            />
-            <SensorCard
-              icon={Zap}
-              title="Light Level"
-              value={sensorData.lightIntensity}
-              unit="lux"
-              min={SENSOR_RANGES.lightIntensity.min}
-              max={SENSOR_RANGES.lightIntensity.max}
-              color="bg-yellow-500"
-            />
-          </div>
-        </div>
-
-        {/* Secondary Sensors */}
-        <div>
-          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">System Metrics</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <SensorCard
-              icon={Waves}
-              title="Water Level"
-              value={sensorData.waterLevel}
-              unit="%"
-              min={SENSOR_RANGES.waterLevel.min}
-              max={SENSOR_RANGES.waterLevel.max}
-              color="bg-cyan-500"
-            />
-            <SensorCard
-              icon={Gauge}
-              title="Flow Rate"
-              value={sensorData.waterFlow}
-              unit="L/min"
-              min={SENSOR_RANGES.waterFlow.min}
-              max={SENSOR_RANGES.waterFlow.max}
-              color="bg-indigo-500"
-            />
-            <SensorCard
-              icon={Wind}
-              title="Humidity"
-              value={sensorData.humidity}
-              unit="%"
-              min={SENSOR_RANGES.humidity.min}
-              max={SENSOR_RANGES.humidity.max}
-              color="bg-sky-500"
-            />
-            <SensorCard
-              icon={Fish}
-              title="Ammonia"
-              value={sensorData.ammonia}
-              unit="ppm"
-              min={SENSOR_RANGES.ammonia.min}
-              max={SENSOR_RANGES.ammonia.max}
-              color="bg-orange-500"
-            />
-          </div>
-        </div>
-
         {/* Live Camera Preview */}
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
           <div className="bg-gray-900 aspect-video relative overflow-hidden group cursor-pointer">
@@ -293,29 +356,29 @@ export default function Dashboard() {
               {alerts.length}
             </span>
           </div>
-          <div className="divide-y divide-gray-100">
+          <div className="divide-y divide-gray-100 max-h-96 overflow-y-auto">
             {alerts.map((alert) => (
               <div
                 key={alert.id}
-                className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                  expandedAlert === alert.id ? "bg-gray-50" : ""
-                }`}
+                className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${expandedAlert === alert.id ? "bg-gray-50" : ""
+                  }`}
                 onClick={() => setExpandedAlert(expandedAlert === alert.id ? null : alert.id)}
               >
                 <div className="flex items-start gap-3">
                   <div
-                    className={`p-2 rounded-lg flex-shrink-0 ${
-                      alert.severity === "high"
+                    className={`p-2 rounded-lg flex-shrink-0 ${alert.severity === "high"
                         ? "bg-red-100"
                         : alert.severity === "medium"
                           ? "bg-amber-100"
                           : "bg-emerald-100"
-                    }`}
+                      }`}
                   >
                     {alert.type === "warning" ? (
                       <AlertTriangle
                         className={`w-4 h-4 ${alert.severity === "high" ? "text-red-600" : "text-amber-600"}`}
                       />
+                    ) : alert.severity === "low" && alert.title.includes("Maintenance") ? (
+                      <Clock className="w-4 h-4 text-blue-600" />
                     ) : (
                       <CheckCircle className="w-4 h-4 text-emerald-600" />
                     )}
@@ -326,13 +389,98 @@ export default function Dashboard() {
                     <div className="text-xs text-gray-500 mt-1">{alert.time}</div>
                   </div>
                   <ChevronDown
-                    className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${
-                      expandedAlert === alert.id ? "rotate-180" : ""
-                    }`}
+                    className={`w-4 h-4 text-gray-400 flex-shrink-0 transition-transform ${expandedAlert === alert.id ? "rotate-180" : ""
+                      }`}
                   />
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Critical Sensors Grid */}
+        <div>
+          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Metrics</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <SensorCard
+              icon={Thermometer}
+              title="Water Temp"
+              value={sensorData.waterTemp}
+              unit="°C"
+              min={20}
+              max={26}
+              color="bg-blue-500"
+            />
+            <SensorCard
+              icon={Droplets}
+              title="pH Level"
+              value={sensorData.ph}
+              unit=""
+              min={6.5}
+              max={7.5}
+              color="bg-purple-500"
+            />
+            <SensorCard
+              icon={Activity}
+              title="Dissolved O₂"
+              value={sensorData.dissolvedO2}
+              unit="mg/L"
+              min={5}
+              max={8}
+              color="bg-green-500"
+            />
+            <SensorCard
+              icon={Zap}
+              title="Light Level"
+              value={sensorData.lightIntensity}
+              unit="lux"
+              min={10000}
+              max={20000}
+              color="bg-yellow-500"
+            />
+          </div>
+        </div>
+
+        {/* Secondary Sensors */}
+        <div>
+          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">System Metrics</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <SensorCard
+              icon={Waves}
+              title="Water Level"
+              value={Math.round(sensorData.waterLevel)}
+              unit="%"
+              min={70}
+              max={100}
+              color="bg-cyan-500"
+            />
+            <SensorCard
+              icon={Gauge}
+              title="Flow Rate"
+              value={sensorData.waterFlow}
+              unit="L/min"
+              min={3}
+              max={6}
+              color="bg-indigo-500"
+            />
+            <SensorCard
+              icon={Wind}
+              title="Humidity"
+              value={sensorData.humidity}
+              unit="%"
+              min={50}
+              max={80}
+              color="bg-sky-500"
+            />
+            <SensorCard
+              icon={Fish}
+              title="Ammonia"
+              value={sensorData.ammonia}
+              unit="ppm"
+              min={0}
+              max={1}
+              color="bg-orange-500"
+            />
           </div>
         </div>
       </div>
