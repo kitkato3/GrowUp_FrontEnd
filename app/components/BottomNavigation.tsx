@@ -1,3 +1,4 @@
+// app/components/BottomNavigation.tsx
 "use client"
 
 import type React from "react"
