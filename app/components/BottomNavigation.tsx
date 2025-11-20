@@ -1,22 +1,24 @@
-// app/components/BottomNavigation.tsx
 "use client"
 
 import type React from "react"
+
 import { Home, Camera, Settings, BarChart3 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-const tabs: {
+interface NavTab {
   id: string
   label: string
   href: string
   icon: React.ComponentType<{ className?: string }>
-}[] = [
-    { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
-    { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
-    { id: "camera", label: "Camera", href: "/camera", icon: Camera },
-    { id: "settings", label: "Settings", href: "/settings", icon: Settings },
-  ]
+}
+
+const tabs: NavTab[] = [
+  { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
+  { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { id: "camera", label: "Camera", href: "/camera", icon: Camera },
+  { id: "settings", label: "Settings", href: "/settings", icon: Settings },
+]
 
 export const BottomNavigation = () => {
   const pathname = usePathname()
@@ -27,7 +29,6 @@ export const BottomNavigation = () => {
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href)
           const Icon = tab.icon
-
           return (
             <Link
               key={tab.id}
