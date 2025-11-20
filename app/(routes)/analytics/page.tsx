@@ -1,68 +1,33 @@
 "use client"
 
-import {
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  ResponsiveContainer,
-  CartesianGrid,
-  Tooltip,
-  Legend
-} from "recharts"
-
-import { Fish, Droplets, Download, Calendar, Filter } from "lucide-react"
-import { useState } from "react"
+import React, { useState, useEffect } from "react"
+import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts"
+import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, BarChart3, Clock } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 /* ------------------------------------------------------
-   TYPES
+    TYPES
 ------------------------------------------------------ */
 
-type SensorKey =
-  | "waterTemp"
-  | "ph"
-  | "dissolvedO2"
-  | "airTemp"
-  | "lightIntensity"
-  | "waterLevel"
-  | "waterFlow"
-  | "nitrates"
-  | "humidity"
-  | "ammonia"
-
+type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "nitrates" | "humidity" | "ammonia"
 type SensorState = Record<SensorKey, boolean>
-
-type SensorTrendRow = {
-  time: string
-} & Record<SensorKey, number>
+type SensorTrendRow = { time: string } & Record<SensorKey, number>
 
 /* ------------------------------------------------------
-   MOCK DATA
+    MOCK DATA
 ------------------------------------------------------ */
 
 const WEEKLY_GROWTH_DATA = [
-  { day: "Mon", height: 12.5, leaves: 8, health: 92 },
-  { day: "Tue", height: 13.2, leaves: 9, health: 94 },
-  { day: "Wed", height: 14.1, leaves: 10, health: 95 },
-  { day: "Thu", height: 15.3, leaves: 11, health: 96 },
-  { day: "Fri", height: 16.8, leaves: 12, health: 97 },
-  { day: "Sat", height: 18.2, leaves: 13, health: 98 },
-  { day: "Sun", height: 19.5, leaves: 14, health: 99 },
+  { day: "Mon", height: 12.5, leaves: 8, health: 92 }, { day: "Tue", height: 13.2, leaves: 9, health: 94 }, { day: "Wed", height: 14.1, leaves: 10, health: 95 }, { day: "Thu", height: 15.3, leaves: 11, health: 96 }, { day: "Fri", height: 16.8, leaves: 12, health: 97 }, { day: "Sat", height: 18.2, leaves: 13, health: 98 }, { day: "Sun", height: 19.5, leaves: 14, health: 99 },
 ]
 
 const SENSOR_TREND_DATA: SensorTrendRow[] = [
-  { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, nitrates: 15, humidity: 65, ammonia: 0.02 },
-  { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, nitrates: 14, humidity: 68, ammonia: 0.01 },
-  { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26, lightIntensity: 450, waterLevel: 83, waterFlow: 13, nitrates: 16, humidity: 62, ammonia: 0.02 },
-  { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29, lightIntensity: 850, waterLevel: 82, waterFlow: 13, nitrates: 17, humidity: 58, ammonia: 0.03 },
-  { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28, lightIntensity: 620, waterLevel: 81, waterFlow: 12, nitrates: 18, humidity: 60, ammonia: 0.02 },
-  { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, nitrates: 16, humidity: 64, ammonia: 0.02 },
+  { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, nitrates: 15, humidity: 65, ammonia: 0.02 }, { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, nitrates: 14, humidity: 68, ammonia: 0.01 }, { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26, lightIntensity: 450, waterLevel: 83, waterFlow: 13, nitrates: 16, humidity: 62, ammonia: 0.02 }, { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29, lightIntensity: 850, waterLevel: 82, waterFlow: 13, nitrates: 17, humidity: 58, ammonia: 0.03 }, { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28, lightIntensity: 620, waterLevel: 81, waterFlow: 12, nitrates: 18, humidity: 60, ammonia: 0.02 }, { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, nitrates: 16, humidity: 64, ammonia: 0.02 },
 ]
 
 /* ------------------------------------------------------
-   UTILITY FUNCTIONS
+    UTILITY FUNCTIONS
 ------------------------------------------------------ */
 
 const formatDate = () => {
@@ -86,7 +51,48 @@ const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
 }
 
 /* ------------------------------------------------------
-   MAIN COMPONENT
+    NAVIGATION COMPONENTS (Local definitions)
+------------------------------------------------------ */
+
+const Navbar: React.FC<{ time: string }> = ({ time }) => (
+  <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
+    <span className="font-bold text-gray-900">GROWUP</span>
+    <div className="flex items-center gap-2">
+      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+      <span className="text-xs text-gray-600">{time}</span>
+    </div>
+  </div>
+);
+
+const BottomNavigation = () => {
+  const pathname = usePathname();
+  const tabs = [
+    { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
+    { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
+    { id: "camera", label: "Camera", href: "/camera", icon: Camera },
+    { id: "settings", label: "Settings", href: "/settings", icon: Settings },
+  ];
+
+  return (
+    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
+      <div className="flex items-center justify-around py-3">
+        {tabs.map((tab) => {
+          const isActive = pathname.startsWith(tab.href);
+          const Icon = tab.icon;
+          return (
+            <Link key={tab.id} href={tab.href} className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}>
+              <Icon className="w-5 h-5 mb-1" />
+              <span className="text-xs font-semibold">{tab.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+/* ------------------------------------------------------
+    MAIN COMPONENT
 ------------------------------------------------------ */
 
 export default function Analytics() {
@@ -105,6 +111,8 @@ export default function Analytics() {
 
   const [selectedRange, setSelectedRange] = useState("thisWeek")
   const [showFilters, setShowFilters] = useState(false)
+  const [currentTime, setCurrentTime] = useState(new Date())
+
 
   /* Filter Growth Data */
   const filteredGrowthData =
@@ -115,7 +123,7 @@ export default function Analytics() {
         : WEEKLY_GROWTH_DATA.slice(2)
 
   /* ------------------------------------------------------
-     EXPORT: Plant Growth CSV
+      EXPORT: Plant Growth CSV
   ------------------------------------------------------ */
   const exportGrowthDataCSV = () => {
     const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
@@ -131,7 +139,7 @@ export default function Analytics() {
   }
 
   /* ------------------------------------------------------
-     EXPORT: Sensor CSV (Only Selected)
+      EXPORT: Sensor CSV (Only Selected)
   ------------------------------------------------------ */
   const exportSensorDataCSV = () => {
     const activeKeys = Object.entries(selectedSensors)
@@ -151,7 +159,7 @@ export default function Analytics() {
   }
 
   /* ------------------------------------------------------
-     EXPORT: All Data Combined
+      EXPORT: All Data Combined
   ------------------------------------------------------ */
   const exportAllData = () => {
     const filename = `complete_analytics_${formatDate()}.csv`
@@ -187,7 +195,7 @@ export default function Analytics() {
   }
 
   /* ------------------------------------------------------
-     Sensor Configuration
+      Sensor Configuration
   ------------------------------------------------------ */
   const sensorConfig: { key: SensorKey; name: string; color: string }[] = [
     { key: "waterTemp", name: "Water Temp", color: "#3b82f6" },
@@ -225,22 +233,30 @@ export default function Analytics() {
   const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
   const activeCount = Object.values(selectedSensors).filter(Boolean).length
 
+  // Update current time locally
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   /* ------------------------------------------------------
-     RENDER
+      RENDER
   ------------------------------------------------------ */
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
+      <Navbar time={currentTime.toLocaleTimeString()} />
+
+      <div className="px-4 py-5 pb-24">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
           <p className="text-gray-600 mt-1">Monitor your aquaponics system performance</p>
         </div>
 
-        <div className="space-y-5 pb-24">
+        <div className="space-y-5">
 
-          {/* ------------------------------------------------------ */}
           {/* EXPORT ALL BUTTON */}
-          {/* ------------------------------------------------------ */}
           <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-2xl p-4 border border-emerald-200">
             <div className="flex items-center justify-between">
               <div>
@@ -259,9 +275,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* ------------------------------------------------------ */}
           {/* GROWTH CHART */}
-          {/* ------------------------------------------------------ */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
 
             <div className="flex items-center justify-between mb-4">
@@ -324,6 +338,8 @@ export default function Analytics() {
                       border: "none",
                       borderRadius: "8px",
                       color: "#fff",
+                      fontSize: "12px",
+                      padding: "8px 12px",
                     }}
                   />
 
@@ -368,9 +384,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* ------------------------------------------------------ */}
           {/* SENSOR TRENDS */}
-          {/* ------------------------------------------------------ */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
 
             <div className="flex justify-between mb-4">
@@ -411,9 +425,7 @@ export default function Analytics() {
                   <button
                     key={sensor.key}
                     onClick={() => toggleSensor(sensor.key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${active
-                      ? "bg-white text-gray-900 border-2 shadow-sm"
-                      : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${active ? "bg-white text-gray-900 border-2 shadow-sm" : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
                       }`}
                     style={{ borderColor: active ? sensor.color : undefined }}
                   >
@@ -474,9 +486,7 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* ------------------------------------------------------ */}
           {/* HEALTH METRICS */}
-          {/* ------------------------------------------------------ */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <div className="flex items-center gap-2 mb-3">
@@ -502,9 +512,10 @@ export default function Analytics() {
               </div>
             </div>
           </div>
-
         </div>
       </div>
+
+      <BottomNavigation />
     </div>
   )
 }
