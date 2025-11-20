@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { Waves, Wind, Droplets, Activity, Zap, Sun, Bell, Clock, Thermometer, AlertTriangle, ChevronDown } from "lucide-react"
-import React, { useEffect } from "react"
+import { useState, useEffect } from "react"
+import { Waves, Wind, Droplets, Activity, Zap, Sun, Bell, Clock, Thermometer, AlertTriangle, Home, Camera, Settings as SettingsIcon, BarChart3, X, Maximize2 } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 // --- TYPE DEFINITIONS ---
 
@@ -41,16 +42,50 @@ interface ThresholdInputProps {
   onChange: (val: number) => void;
 }
 
-// --- INITIAL STATE ---
+// --- INITIAL STATE / MOCK DATA ---
 
 const INITIAL_CONTROLS: SystemControls = {
-  pump: true,
-  fan: false,
-  phAdjustment: true,
-  aerator: true,
-  growLight: true,
-  heater: false,
+  pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true, heater: false,
 }
+
+// --- NAVIGATION COMPONENTS (Local definitions) ---
+const Navbar: React.FC<{ time: string }> = ({ time }) => (
+  <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
+    <span className="font-bold text-gray-900">GROWUP</span>
+    <div className="flex items-center gap-2">
+      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+      <span className="text-xs text-gray-600">{time}</span>
+    </div>
+  </div>
+);
+
+const BottomNavigation = () => {
+  const pathname = usePathname();
+  const tabs = [
+    { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
+    { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
+    { id: "camera", label: "Camera", href: "/camera", icon: Camera },
+    { id: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
+  ];
+
+  return (
+    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
+      <div className="flex items-center justify-around py-3">
+        {tabs.map((tab) => {
+          const isActive = pathname.startsWith(tab.href);
+          const Icon = tab.icon;
+          return (
+            <Link key={tab.id} href={tab.href} className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}>
+              <Icon className="w-5 h-5 mb-1" />
+              <span className="text-xs font-semibold">{tab.label}</span>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 
 // --- COMPONENTS ---
 
@@ -133,6 +168,15 @@ export default function Settings() {
     dissolvedO2: { min: 5, max: 8 },
     ammonia: { min: 0, max: 0.5 },
   })
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
 
   const handleControlChange = (key: keyof SystemControls, val: boolean) => {
     setControls({ ...controls, [key]: val })
@@ -141,6 +185,7 @@ export default function Settings() {
   const handlePresetChange = (preset: string) => {
     setActivePreset(preset)
 
+    // Apply preset configurations
     switch (preset) {
       case "balanced":
         setControls({
@@ -186,114 +231,214 @@ export default function Settings() {
   }
 
   return (
-    // KRITIKAL FIX: Tinanggal ang min-h-screen at p-4 tags
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Configure your aquaponics system</p>
+    <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
+
+      <Navbar time={currentTime.toLocaleTimeString()} />
+
+      <div className="px-4 py-5 pb-24">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <p className="text-gray-600 mt-1">Configure your aquaponics system</p>
+        </div>
+
+        <div className="space-y-5">
+          {/* Control Panel */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 mb-4">System Controls</h3>
+            <div className="space-y-3">
+              <ControlToggle
+                label="Submersible Pump"
+                description="Main water circulation"
+                icon={Waves}
+                active={controls.pump}
+                onChange={(val) => handleControlChange('pump', val)}
+              />
+              <ControlToggle
+                label="DC Fan"
+                description="Air circulation & cooling"
+                icon={Wind}
+                active={controls.fan}
+                onChange={(val) => handleControlChange('fan', val)}
+              />
+              <ControlToggle
+                label="pH Adjustment"
+                description="Automatic pH balancing"
+                icon={Droplets}
+                active={controls.phAdjustment}
+                onChange={(val) => handleControlChange('phAdjustment', val)}
+              />
+              <ControlToggle
+                label="Aerator"
+                description="Oxygen circulation"
+                icon={Activity}
+                active={controls.aerator}
+                onChange={(val) => handleControlChange('aerator', val)}
+              />
+              <ControlToggle
+                label="Grow Light"
+                description="LED lighting system"
+                icon={Sun}
+                active={controls.growLight}
+                onChange={(val) => handleControlChange('growLight', val)}
+              />
+              <ControlToggle
+                label="Water Heater"
+                description="Temperature regulation"
+                icon={Zap}
+                active={controls.heater}
+                onChange={(val) => handleControlChange('heater', val)}
+              />
+            </div>
+          </div>
+
+          {/* Automation Presets */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 mb-4">Automation Presets</h3>
+            <div className="space-y-3">
+              <PresetCard
+                title="Balanced Mode"
+                description="Optimal settings for standard growth"
+                icon={Activity}
+                active={activePreset === "balanced"}
+                onActivate={() => handlePresetChange("balanced")}
+              />
+              <PresetCard
+                title="High Growth Mode"
+                description="Maximum growth with increased resource use"
+                icon={Zap}
+                active={activePreset === "highGrowth"}
+                onActivate={() => handlePresetChange("highGrowth")}
+              />
+              <PresetCard
+                title="Eco Mode"
+                description="Energy saving mode with reduced power"
+                icon={Sun}
+                active={activePreset === "ecoMode"}
+                onActivate={() => handlePresetChange("ecoMode")}
+              />
+              <PresetCard
+                title="Maintenance Mode"
+                description="Safe mode for system maintenance"
+                icon={AlertTriangle}
+                active={activePreset === "maintenance"}
+                onActivate={() => handlePresetChange("maintenance")}
+              />
+            </div>
+          </div>
+
+          {/* Alert Thresholds */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2 mb-4">
+              <Bell className="w-5 h-5 text-amber-500" />
+              <h3 className="font-bold text-gray-900">Alert Thresholds</h3>
+            </div>
+            <div className="space-y-3">
+              <ThresholdInput
+                label="Water Temperature"
+                value={thresholds.waterTemp.min}
+                unit="°C (min)"
+                icon={Thermometer}
+                min={18}
+                max={30}
+                onChange={(val) => setThresholds({
+                  ...thresholds,
+                  waterTemp: { ...thresholds.waterTemp, min: val }
+                })}
+              />
+              <ThresholdInput
+                label="Water Temperature"
+                value={thresholds.waterTemp.max}
+                unit="°C (max)"
+                icon={Thermometer}
+                min={18}
+                max={30}
+                onChange={(val) => setThresholds({
+                  ...thresholds,
+                  waterTemp: { ...thresholds.waterTemp, max: val }
+                })}
+              />
+              <ThresholdInput
+                label="pH Level"
+                value={thresholds.ph.min}
+                unit="(min)"
+                icon={Droplets}
+                min={5}
+                max={9}
+                onChange={(val) => setThresholds({
+                  ...thresholds,
+                  ph: { ...thresholds.ph, min: val }
+                })}
+              />
+              <ThresholdInput
+                label="pH Level"
+                value={thresholds.ph.max}
+                unit="(max)"
+                icon={Droplets}
+                min={5}
+                max={9}
+                onChange={(val) => setThresholds({
+                  ...thresholds,
+                  ph: { ...thresholds.ph, max: val }
+                })}
+              />
+              <ThresholdInput
+                label="Dissolved Oxygen"
+                value={thresholds.dissolvedO2.min}
+                unit="mg/L (min)"
+                icon={Activity}
+                min={3}
+                max={10}
+                onChange={(val) => setThresholds({
+                  ...thresholds,
+                  dissolvedO2: { ...thresholds.dissolvedO2, min: val }
+                })}
+              />
+              <ThresholdInput
+                label="Ammonia Level"
+                value={thresholds.ammonia.max}
+                unit="ppm (max)"
+                icon={AlertTriangle}
+                min={0}
+                max={2}
+                onChange={(val) => setThresholds({
+                  ...thresholds,
+                  ammonia: { ...thresholds.ammonia, max: val }
+                })}
+              />
+            </div>
+          </div>
+
+          {/* System Info */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 mb-4">System Information</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between pb-3 border-b border-gray-100">
+                <span className="text-gray-600">Firmware Version</span>
+                <span className="font-semibold text-gray-900">v2.1.3</span>
+              </div>
+              <div className="flex justify-between pb-3 border-b border-gray-100">
+                <span className="text-gray-600">Last Update</span>
+                <span className="font-semibold text-gray-900">2 days ago</span>
+              </div>
+              <div className="flex justify-between pb-3 border-b border-gray-100">
+                <span className="text-gray-600">System Uptime</span>
+                <span className="font-semibold text-gray-900">7d 14h 32m</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Storage Used</span>
+                <span className="font-semibold text-gray-900">2.1GB / 32GB</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Save Changes Button */}
+          <button className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all">
+            Save All Changes
+          </button>
+        </div>
       </div>
 
-      <div className="space-y-5 pb-24">
-        {/* Control Panel */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-gray-900 mb-4">System Controls</h3>
-          <div className="space-y-3">
-            <ControlToggle
-              label="Submersible Pump" description="Main water circulation" icon={Waves} active={controls.pump} onChange={(val) => handleControlChange('pump', val)}
-            />
-            <ControlToggle
-              label="DC Fan" description="Air circulation & cooling" icon={Wind} active={controls.fan} onChange={(val) => handleControlChange('fan', val)}
-            />
-            <ControlToggle
-              label="pH Adjustment" description="Automatic pH balancing" icon={Droplets} active={controls.phAdjustment} onChange={(val) => handleControlChange('phAdjustment', val)}
-            />
-            <ControlToggle
-              label="Aerator" description="Oxygen circulation" icon={Activity} active={controls.aerator} onChange={(val) => handleControlChange('aerator', val)}
-            />
-            <ControlToggle
-              label="Grow Light" description="LED lighting system" icon={Sun} active={controls.growLight} onChange={(val) => handleControlChange('growLight', val)}
-            />
-            <ControlToggle
-              label="Water Heater" description="Temperature regulation" icon={Zap} active={controls.heater} onChange={(val) => handleControlChange('heater', val)}
-            />
-          </div>
-        </div>
-
-        {/* Automation Presets */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-gray-900 mb-4">Automation Presets</h3>
-          <div className="space-y-3">
-            <PresetCard
-              title="Balanced Mode" description="Optimal settings for standard growth" icon={Activity} active={activePreset === "balanced"} onActivate={() => handlePresetChange("balanced")}
-            />
-            <PresetCard
-              title="High Growth Mode" description="Maximum growth with increased resource use" icon={Zap} active={activePreset === "highGrowth"} onActivate={() => handlePresetChange("highGrowth")}
-            />
-            <PresetCard
-              title="Eco Mode" description="Energy saving mode with reduced power" icon={Sun} active={activePreset === "ecoMode"} onActivate={() => handlePresetChange("ecoMode")}
-            />
-            <PresetCard
-              title="Maintenance Mode" description="Safe mode for system maintenance" icon={AlertTriangle} active={activePreset === "maintenance"} onActivate={() => handlePresetChange("maintenance")}
-            />
-          </div>
-        </div>
-
-        {/* Alert Thresholds */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <Bell className="w-5 h-5 text-amber-500" />
-            <h3 className="font-bold text-gray-900">Alert Thresholds</h3>
-          </div>
-          <div className="space-y-3">
-            <ThresholdInput
-              label="Water Temperature" value={thresholds.waterTemp.min} unit="°C (min)" icon={Thermometer} min={18} max={30} onChange={(val) => setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, min: val } })}
-            />
-            <ThresholdInput
-              label="Water Temperature" value={thresholds.waterTemp.max} unit="°C (max)" icon={Thermometer} min={18} max={30} onChange={(val) => setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, max: val } })}
-            />
-            <ThresholdInput
-              label="pH Level" value={thresholds.ph.min} unit="(min)" icon={Droplets} min={5} max={9} onChange={(val) => setThresholds({ ...thresholds, ph: { ...thresholds.ph, min: val } })}
-            />
-            <ThresholdInput
-              label="pH Level" value={thresholds.ph.max} unit="(max)" icon={Droplets} min={5} max={9} onChange={(val) => setThresholds({ ...thresholds, ph: { ...thresholds.ph, max: val } })}
-            />
-            <ThresholdInput
-              label="Dissolved Oxygen" value={thresholds.dissolvedO2.min} unit="mg/L (min)" icon={Activity} min={3} max={10} onChange={(val) => setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, min: val } })}
-            />
-            <ThresholdInput
-              label="Ammonia Level" value={thresholds.ammonia.max} unit="ppm (max)" icon={AlertTriangle} min={0} max={2} onChange={(val) => setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, max: val } })}
-            />
-          </div>
-        </div>
-
-        {/* System Info */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-          <h3 className="font-bold text-gray-900 mb-4">System Information</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between pb-3 border-b border-gray-100">
-              <span className="text-gray-600">Firmware Version</span>
-              <span className="font-semibold text-gray-900">v2.1.3</span>
-            </div>
-            <div className="flex justify-between pb-3 border-b border-gray-100">
-              <span className="text-gray-600">Last Update</span>
-              <span className="font-semibold text-gray-900">2 days ago</span>
-            </div>
-            <div className="flex justify-between pb-3 border-b border-gray-100">
-              <span className="text-gray-600">System Uptime</span>
-              <span className="font-semibold text-gray-900">7d 14h 32m</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Storage Used</span>
-              <span className="font-semibold text-gray-900">2.1GB / 32GB</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Save Changes Button */}
-        <button className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all">
-          Save All Changes
-        </button>
-      </div>
+      <BottomNavigation />
     </div>
   )
 }
