@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useState, useEffect } from "react"
 import { Thermometer, Droplets, Activity, Zap, Waves, Gauge, Wind, Fish, ChevronDown, AlertTriangle, CheckCircle, Camera, Maximize2, Bell, X, Info, Clock } from "lucide-react"
 
@@ -367,10 +369,10 @@ export default function Dashboard() {
                 <div className="flex items-start gap-3">
                   <div
                     className={`p-2 rounded-lg flex-shrink-0 ${alert.severity === "high"
-                        ? "bg-red-100"
-                        : alert.severity === "medium"
-                          ? "bg-amber-100"
-                          : "bg-emerald-100"
+                      ? "bg-red-100"
+                      : alert.severity === "medium"
+                        ? "bg-amber-100"
+                        : "bg-emerald-100"
                       }`}
                   >
                     {alert.type === "warning" ? (
