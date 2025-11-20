@@ -1,7 +1,7 @@
 "use client"
 
 import { Camera, X, Download, Trash2 } from "lucide-react"
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 
 // --- Type Definitions ---
 
@@ -54,6 +54,19 @@ const GALLERY_SNAPSHOTS: Snapshot[] = [
     { id: 6, date: "2024-11-14", time: "08:00 AM", thumbnail: "🌿" },
 ]
 
+// --- Helper Functions ---
+
+const formatDuration = (seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    const formatted = [h, m, s]
+        .map(v => v.toString().padStart(2, '0'))
+        .filter((v, i) => v !== "00" || i > 0 || h > 0)
+        .join(":");
+    return formatted.startsWith("0") && formatted.length > 2 ? formatted.substring(1) : formatted;
+}
+
 // --- Toast Component ---
 
 const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
@@ -95,6 +108,12 @@ export default function App() {
     const [showGallery, setShowGallery] = useState<boolean>(false)
     const [selectedSnapshot, setSelectedSnapshot] = useState<Snapshot | null>(null)
 
+    // State for new features
+    const [isRecording, setIsRecording] = useState<boolean>(false);
+    const [recordingDuration, setRecordingDuration] = useState<number>(0);
+    const [zoomLevel, setZoomLevel] = useState<number>(1.0); // 1.0 (1x) to 4.0 (4x)
+    const [showZoomControls, setShowZoomControls] = useState<boolean>(false);
+
     const [settings, setSettings] = useState<SettingsState>({
         resolution: "1080p",
         fps: 30,
@@ -108,13 +127,14 @@ export default function App() {
 
     const [toast, setToast] = useState<{ message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default' }>({ message: '', visible: false, color: 'info' });
 
-    const showToast = (message: string, color: 'success' | 'info' | 'warning' | 'default' = 'info'): void => {
+    const showToast = useCallback((message: string, color: 'success' | 'info' | 'warning' | 'default' = 'info'): void => {
         setToast({ message, visible: true, color });
         setTimeout(() => {
             setToast(prev => ({ ...prev, visible: false }));
         }, 3000);
-    };
+    }, []);
 
+    // Clock update effect
     useEffect(() => {
         const interval = setInterval(() => {
             setCurrentTime(new Date())
@@ -122,21 +142,82 @@ export default function App() {
         return () => clearInterval(interval)
     }, [])
 
+    // Recording timer effect
+    useEffect(() => {
+        let interval: NodeJS.Timeout | null = null;
+        if (isRecording) {
+            interval = setInterval(() => {
+                setRecordingDuration(prevDuration => prevDuration + 1);
+            }, 1000);
+        } else if (!isRecording && recordingDuration > 0) {
+            // Logic to simulate video saving after stopping
+            if (recordingDuration >= 3) {
+                simulateDownload('video/mp4', `kale_video_${new Date().toISOString()}.mp4`, 'Recorded Video', recordingDuration);
+            } else if (recordingDuration > 0) {
+                showToast("Recording too short, file discarded.", 'warning');
+            }
+            setRecordingDuration(0);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isRecording, recordingDuration, showToast]);
+
+
     const handleSettingChange = (key: keyof SettingsState, value: string | number | boolean): void => {
         setSettings(prev => ({ ...prev, [key]: value }))
     }
 
+    // Function to simulate saving a file to the user's device
+    const simulateDownload = (mimeType: string, filename: string, contentLabel: string, duration?: number): void => {
+        // Fallback for creating a mock file in the browser for download
+        let mockContent = `Mock ${contentLabel} data captured at ${new Date().toLocaleString()}.`;
+        if (duration) {
+            mockContent += ` Duration: ${formatDuration(duration)}.`;
+        }
+
+        const blob = new Blob([mockContent], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+
+        // Use setTimeout to ensure the browser has time to register the element before clicking
+        setTimeout(() => {
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast(`Downloaded & saved to device photos: ${filename}`, 'success');
+        }, 10);
+    }
+
+
     const handleSnapshot = (): void => {
-        setShowGallery(true)
-        showToast("Snapshot gallery opened!", 'info');
+        // Simulate a screenshot and its immediate download (save to photos)
+        simulateDownload('image/png', `kale_snapshot_${new Date().toISOString().slice(0, 19).replace(/[:T-]/g, "")}.png`, "Kale Tower Snapshot");
     }
 
     const handleRecord = (): void => {
-        showToast("🎥 Recording started! Click the button again to stop.", 'info');
+        if (isRecording) {
+            // Stop recording
+            setIsRecording(false);
+        } else {
+            // Start recording
+            setRecordingDuration(0); // Reset duration before starting
+            setIsRecording(true);
+            showToast("🎥 Recording started! Click the button again to stop.", 'info');
+        }
     }
 
-    const handleZoom = (): void => {
-        showToast("🔍 Zoom controls activated. Use virtual controls for adjustments.", 'info');
+    const handleZoomToggle = (): void => {
+        setShowZoomControls(prev => !prev);
+        if (!showZoomControls) {
+            showToast("🔍 Zoom controls enabled. Adjust the slider for magnification.", 'info');
+        } else {
+            showToast("🔍 Zoom controls disabled.", 'info');
+        }
     }
 
     const handleSaveSettings = (): void => {
@@ -144,13 +225,15 @@ export default function App() {
         showToast("✅ Settings saved successfully!", 'success');
     }
 
-    const handleDownload = (): void => {
-        showToast("📥 Download request sent. File processing...", 'success');
+    const handleGalleryDownload = (snapshot: Snapshot): void => {
+        // This function handles the download and save action for a gallery snapshot.
+        simulateDownload('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
     }
 
     const handleDelete = (): void => {
         showToast("🗑️ Snapshot deleted successfully.", 'warning');
         setSelectedSnapshot(null);
+        // Note: In a real app, this would delete the file from storage (Firestore/Cloud Storage)
     }
 
 
@@ -165,27 +248,68 @@ export default function App() {
 
                     {/* Camera Feed */}
                     <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group shadow-xl">
-                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
-                            <div className="text-center text-white">
-                                <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                                <div className="text-lg font-semibold">Live Kale Tower Feed</div>
-                                <div className="text-sm opacity-70">AI Plant Detection Active</div>
+                        {/* Zoom Wrapper to apply transformation */}
+                        <div
+                            className="absolute inset-0 transition-transform duration-300 ease-in-out"
+                            style={{ transform: `scale(${zoomLevel})` }}
+                        >
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
+                                <div className="text-center text-white">
+                                    <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                                    <div className="text-lg font-semibold">Live Kale Tower Feed</div>
+                                    <div className="text-sm opacity-70">AI Plant Detection Active</div>
+                                </div>
+                            </div>
+
+                            {/* Live/Recording indicator */}
+                            <div className={`absolute top-4 right-4 w-4 h-4 rounded-full shadow-md ${isRecording ? 'bg-red-600 animate-pulse' : 'bg-green-500'}`}></div>
+
+                            {/* Recording Duration Indicator */}
+                            {isRecording && (
+                                <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded-xl font-bold text-sm shadow-md backdrop-blur-sm">
+                                    REC {formatDuration(recordingDuration)}
+                                </div>
+                            )}
+
+                            {/* Time and Specs */}
+                            <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
+                                <div className="text-sm font-semibold font-mono">
+                                    {currentTime.toLocaleTimeString()}
+                                </div>
+                                <div className="text-xs text-gray-300">
+                                    {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : 'Live'}
+                                </div>
                             </div>
                         </div>
-                        {/* Live indicator */}
-                        <div className="absolute top-4 right-4 bg-red-500 w-4 h-4 rounded-full animate-pulse shadow-md"></div>
-                        {/* Time and Specs */}
-                        <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
-                            <div className="text-sm font-semibold font-mono">
-                                {currentTime.toLocaleTimeString()}
-                            </div>
-                            <div className="text-xs text-gray-300">{settings.resolution} • {settings.fps}fps • Live</div>
-                        </div>
-                        {/* Detection Summary */}
+
+                        {/* Detection Summary - Outside the zoom transform */}
                         <div className="absolute bottom-4 right-4 bg-emerald-600/90 px-3 py-2 rounded-lg text-white font-semibold shadow-md backdrop-blur-sm">
                             <div className="text-xs">4 Kales Detected</div>
                         </div>
                     </div>
+
+                    {/* Zoom Slider Controls */}
+                    {showZoomControls && (
+                        <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                            <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                                Zoom Level: <span className="text-purple-600">{zoomLevel.toFixed(1)}x</span>
+                            </h3>
+                            <input
+                                type="range"
+                                min="1.0"
+                                max="4.0"
+                                step="0.1"
+                                value={zoomLevel}
+                                onChange={(e) => setZoomLevel(Number(e.target.value))}
+                                className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                            />
+                            <div className="flex justify-between text-sm text-gray-500 mt-2">
+                                <span>1x (Wide)</span>
+                                <span>4x (Macro)</span>
+                            </div>
+                        </div>
+                    )}
+
 
                     {/* AI Detection Results */}
                     <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
@@ -222,24 +346,40 @@ export default function App() {
                         <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
                             Action Center
                         </h3>
+                        {/* Now a 2x2 grid of the four remaining primary controls */}
                         <div className="grid grid-cols-2 gap-3">
-                            <button
-                                onClick={handleSnapshot}
-                                className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                            >
-                                📸 Gallery
-                            </button>
+                            {/* Removed: 📸 Capture & Save button */}
+
                             <button
                                 onClick={handleRecord}
-                                className="p-4 bg-blue-100 hover:bg-blue-200 rounded-xl font-bold text-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                                className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${isRecording
+                                    ? "bg-red-500 hover:bg-red-600 text-white"
+                                    : "bg-blue-100 hover:bg-blue-200 text-blue-700"
+                                    }`}
                             >
-                                🎥 Record
+                                {isRecording ? (
+                                    <span className="inline-flex items-center gap-2">
+                                        <span className="animate-ping inline-block w-3 h-3 bg-white rounded-full"></span>
+                                        STOP ({formatDuration(recordingDuration)})
+                                    </span>
+                                ) : (
+                                    "🎥 Record"
+                                )}
                             </button>
                             <button
-                                onClick={handleZoom}
-                                className="p-4 bg-purple-100 hover:bg-purple-200 rounded-xl font-bold text-purple-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                                onClick={() => setShowGallery(true)}
+                                className="p-4 bg-amber-100 hover:bg-amber-200 rounded-xl font-bold text-amber-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                             >
-                                🔍 Zoom
+                                🖼️ Gallery
+                            </button>
+                            <button
+                                onClick={handleZoomToggle}
+                                className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${showZoomControls
+                                    ? "bg-purple-500 hover:bg-purple-600 text-white"
+                                    : "bg-purple-100 hover:bg-purple-200 text-purple-700"
+                                    }`}
+                            >
+                                🔍 Zoom ({zoomLevel.toFixed(1)}x)
                             </button>
                             <button
                                 onClick={() => setShowSettings(true)}
@@ -342,26 +482,15 @@ export default function App() {
                                         {selectedSnapshot.thumbnail}
                                     </div>
                                     <div className="p-6 bg-white">
-                                        <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                            Snapshot - {selectedSnapshot.date}
-                                        </h3>
-                                        <p className="text-gray-500 mb-4">
-                                            Captured at {selectedSnapshot.time}
-                                        </p>
-                                        <div className="grid grid-cols-2 gap-3">
+
+                                        {/* Simplified button layout as requested: Removed caption/metadata and Delete button */}
+                                        <div className="space-y-3">
                                             <button
-                                                onClick={handleDownload}
-                                                className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                                                onClick={() => handleGalleryDownload(selectedSnapshot)}
+                                                className="w-full p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
                                             >
                                                 <Download className="w-5 h-5" />
-                                                Download
-                                            </button>
-                                            <button
-                                                onClick={handleDelete}
-                                                className="p-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
-                                            >
-                                                <Trash2 className="w-5 h-5" />
-                                                Delete
+                                                Download & Save
                                             </button>
                                         </div>
                                         <button
@@ -381,7 +510,7 @@ export default function App() {
                 </div>
             )}
 
-            {/* Settings Modal */}
+            {/* Settings Modal (Unchanged) */}
             {showSettings && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
