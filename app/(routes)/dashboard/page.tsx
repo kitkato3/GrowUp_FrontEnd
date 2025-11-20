@@ -29,7 +29,7 @@ const getStatusColor = (status: ThresholdStatus): string => { switch (status) { 
 const calculatePercentage = (value: number, min: number, max: number): number => { return ((value - min) / (max - min)) * 100 }
 
 
-// --- GLOBAL NAVIGATION COMPONENTS (Local definitions) ---
+// --- NAVIGATION COMPONENTS (Local definitions) ---
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
     <span className="font-bold text-gray-900">GROWUP</span>
@@ -74,7 +74,6 @@ const SensorCard: React.FC<SensorCardProps> = ({ icon: Icon, title, value, unit,
 };
 const ControlToggle: React.FC<ControlToggleProps> = ({ label, icon: Icon, active, onChange }) => (<div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl"><div className="flex items-center gap-3"><div className={`p-2 rounded-lg ${active ? 'bg-emerald-100' : 'bg-gray-200'}`}><Icon className={`w-5 h-5 ${active ? 'text-emerald-600' : 'text-gray-400'}`} /></div><span className="font-medium text-gray-900">{label}</span></div><button onClick={() => onChange(!active)} className={`w-12 h-6 rounded-full transition-colors ${active ? 'bg-emerald-500' : 'bg-gray-300'}`}><div className={`w-5 h-5 bg-white rounded-full transition-transform ${active ? 'translate-x-6' : 'translate-x-0.5'}`} /></button></div>)
 
-
 // --- MAIN DASHBOARD COMPONENT ---
 export default function Dashboard() {
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
@@ -105,11 +104,11 @@ export default function Dashboard() {
     setControls({ ...controls, [key]: val });
   }
 
+  // Modal Components (Fixed: Removed React.FC to allow access to local state)
   const ControlsModal = () => {
     const handleLocalControlChange = (key: keyof ControlState, val: boolean) => { setControls(prev => ({ ...prev, [key]: val })); };
-    return (<div className="fixed inset-0 bg-black/50 z-50 flex items-end"><div className="w-full bg-white rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto"><div className="flex items-center justify-between mb-6"><h2 className="text-2xl font-bold text-gray-900">Quick Controls</h2><button onClick={() => setShowControlsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-6 h-6" /></button></div><div className="space-y-3"><ControlToggle label="Submersible Pump" icon={Waves} active={controls.pump} onChange={(val: boolean) => handleLocalControlChange('pump', val)} /><ControlToggle label="DC Fan" icon={Wind} active={controls.fan} onChange={(val: boolean) => handleLocalControlChange('fan', val)} /><ControlToggle label="pH Adjustment" icon={Droplets} active={controls.phAdjustment} onChange={(val: boolean) => handleLocalControlChange('phAdjustment', val)} /><ControlToggle label="Aerator" icon={Activity} active={controls.aerator} onChange={(val: boolean) => handleLocalControlChange('aerator', val)} /></div><button onClick={() => setShowControlsModal(false)} className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">Done</button></div></div>)
+    return (<div className="fixed inset-0 bg-black/50 z-50 flex items-end"><div className="w-full bg-white rounded-t-3xl p-6 max-h-[80vh] overflow-y-auto"><div className="flex items-center justify-between mb-6"><h2 className="text-2xl font-bold text-gray-900">Quick Controls</h2><button onClick={() => setShowControlsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-6 h-6" /></button></div><div className="space-y-3"><ControlToggle label="Submersible Pump" icon={Waves} active={controls.pump} onChange={(val: boolean) => handleLocalControlChange('pump', val)} /><ControlToggle label="DC Fan" icon={Wind} active={controls.fan} onChange={(val: boolean) => handleLocalControlChange('fan', val)} /><ControlToggle label="pH Adjustment" icon={Droplets} active={controls.phAdjustment} onChange={(val: boolean) => handleControlChange('phAdjustment', val)} /><ControlToggle label="Aerator" icon={Activity} active={controls.aerator} onChange={(val: boolean) => handleLocalControlChange('aerator', val)} /></div><button onClick={() => setShowControlsModal(false)} className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">Done</button></div></div>)
   };
-
   const CameraModal = () => (
     <div className="fixed inset-0 bg-black z-50 flex flex-col"><div className="flex items-center justify-between p-4 bg-black/80"><h2 className="text-white font-bold">Live Camera Feed</h2><button onClick={() => setShowCameraModal(false)} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><X className="w-6 h-6" /></button></div><div className="flex-1 bg-gray-900 flex items-center justify-center relative"><div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/40 flex items-center justify-center"><div className="text-center text-white"><Camera className="w-20 h-20 mx-auto mb-4 opacity-50" /><div className="text-xl font-semibold">Live Tower Feed</div></div></div></div></div>)
 
