@@ -1,329 +1,528 @@
-import { Camera } from "lucide-react"
-import { useState, useEffect } from "react"
+"use client"
 
-const PLANT_DETECTIONS = [
-  { name: "Kale #1", status: "Healthy", color: "emerald" },
-  { name: "Kale #2", status: "Growing", color: "emerald" },
-  { name: "Kale #3", status: "Needs Water", color: "amber" },
-  { name: "Kale #4", status: "Healthy", color: "emerald" }
+import { Camera, X, Download, Trash2 } from "lucide-react"
+import React, { useState, useEffect } from "react"
+
+// --- Type Definitions (Fixes errors related to implicitly 'any' and state assignment) ---
+
+interface PlantDetection {
+    name: string;
+    status: string;
+    color: 'emerald' | 'amber';
+}
+
+interface Snapshot {
+    id: number;
+    date: string;
+    time: string;
+    thumbnail: string;
+}
+
+interface SettingsState {
+    resolution: string;
+    fps: number;
+    brightness: number;
+    contrast: number;
+    detectionSensitivity: number;
+    autoFocus: boolean;
+    nightMode: boolean;
+    motionDetection: boolean;
+}
+
+interface ToastProps {
+    message: string;
+    visible: boolean;
+    color: 'success' | 'info' | 'warning' | 'default';
+    onClose: () => void;
+}
+
+// --- Mock Data (Now Strongly Typed) ---
+
+const PLANT_DETECTIONS: PlantDetection[] = [
+    { name: "Kale #1", status: "Healthy", color: "emerald" },
+    { name: "Kale #2", status: "Growing", color: "emerald" },
+    { name: "Kale #3", status: "Needs Water", color: "amber" },
+    { name: "Kale #4", status: "Healthy", color: "emerald" }
 ]
 
-// Sample gallery data - automatic 8am screenshots
-const GALLERY_SNAPSHOTS = [
-  { id: 1, date: "2024-11-19", time: "08:00 AM", thumbnail: "🌱" },
-  { id: 2, date: "2024-11-18", time: "08:00 AM", thumbnail: "🌿" },
-  { id: 3, date: "2024-11-17", time: "08:00 AM", thumbnail: "🥬" },
-  { id: 4, date: "2024-11-16", time: "08:00 AM", thumbnail: "🍃" },
-  { id: 5, date: "2024-11-15", time: "08:00 AM", thumbnail: "🌱" },
-  { id: 6, date: "2024-11-14", time: "08:00 AM", thumbnail: "🌿" },
+const GALLERY_SNAPSHOTS: Snapshot[] = [
+    { id: 1, date: "2024-11-19", time: "08:00 AM", thumbnail: "🌱" },
+    { id: 2, date: "2024-11-18", time: "08:00 AM", thumbnail: "🌿" },
+    { id: 3, date: "2024-11-17", time: "08:00 AM", thumbnail: "🥬" },
+    { id: 4, date: "2024-11-16", time: "08:00 AM", thumbnail: "🍃" },
+    { id: 5, date: "2024-11-15", time: "08:00 AM", thumbnail: "🌱" },
+    { id: 6, date: "2024-11-14", time: "08:00 AM", thumbnail: "🌿" },
 ]
 
-export default function CameraView() {
-  const [currentTime, setCurrentTime] = useState(new Date())
-  const [showSettings, setShowSettings] = useState(false)
-  const [showGallery, setShowGallery] = useState(false)
-  const [settings, setSettings] = useState({
-    resolution: "1080p",
-    fps: 30,
-    brightness: 50,
-    contrast: 50,
-    detectionSensitivity: 75,
-    autoFocus: true,
-    nightMode: false,
-    motionDetection: true,
-  })
+// --- Toast Component (Props typed to fix Ln 27 errors) ---
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date())
-    }, 1000)
-    return () => clearInterval(interval)
-  }, [])
+/**
+ * A reusable Toast Notification component to replace browser alerts.
+ */
+const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
+    if (!visible) return null;
 
-  const handleSettingChange = (key, value) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
-  }
+    const baseClasses = "fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl transition-all duration-300 z-[100] flex items-center space-x-3";
+    let colorClasses = "";
 
-  const handleSnapshot = () => {
-    setShowGallery(true)
-  }
+    switch (color) {
+        case 'success':
+            colorClasses = "bg-emerald-600 text-white";
+            break;
+        case 'info':
+            colorClasses = "bg-blue-600 text-white";
+            break;
+        case 'warning':
+            colorClasses = "bg-amber-600 text-white";
+            break;
+        default:
+            colorClasses = "bg-gray-800 text-white";
+    }
 
-  const handleRecord = () => {
-    alert("🎥 Recording started! Click again to stop.")
-  }
-
-  const handleZoom = () => {
-    alert("🔍 Zoom controls activated. Use pinch gesture to zoom.")
-  }
-
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto p-4">
-        <div className="space-y-5 pb-24">
-          {/* Camera Feed */}
-          <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group">
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
-              <div className="text-center text-white">
-                <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                <div className="text-lg font-semibold">Live Kale Tower Feed</div>
-                <div className="text-sm opacity-70">AI Plant Detection Active</div>
-              </div>
-            </div>
-            <div className="absolute top-4 right-4 bg-red-500 w-4 h-4 rounded-full animate-pulse"></div>
-            <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded text-white">
-              <div className="text-sm font-semibold font-mono">
-                {currentTime.toLocaleTimeString()}
-              </div>
-              <div className="text-xs">{settings.resolution} • {settings.fps}fps • Live</div>
-            </div>
-            <div className="absolute bottom-4 right-4 bg-emerald-600/90 px-3 py-2 rounded text-white">
-              <div className="text-xs font-semibold">4 Kales Detected</div>
-            </div>
-          </div>
-
-          {/* AI Detection Results */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-gray-900 mb-4">Kale Detection Results</h3>
-            <div className="space-y-3">
-              {PLANT_DETECTIONS.map((plant, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-center justify-between p-3 rounded-lg ${plant.color === "emerald"
-                      ? "bg-emerald-50 border border-emerald-200"
-                      : "bg-amber-50 border border-amber-200"
-                    }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-3 h-3 rounded-full ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
-                    ></div>
-                    <span className="font-medium text-gray-900">{plant.name}</span>
-                  </div>
-                  <span
-                    className={`text-xs font-semibold ${plant.color === "emerald" ? "text-emerald-600" : "text-amber-600"}`}
-                  >
-                    {plant.status}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Camera Controls */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-            <h3 className="font-bold text-gray-900 mb-4">Camera Controls</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={handleSnapshot}
-                className="p-3 bg-emerald-50 hover:bg-emerald-100 rounded-lg font-semibold text-emerald-600 transition-colors"
-              >
-                📸 Gallery
-              </button>
-              <button
-                onClick={handleRecord}
-                className="p-3 bg-blue-50 hover:bg-blue-100 rounded-lg font-semibold text-blue-600 transition-colors"
-              >
-                🎥 Record
-              </button>
-              <button
-                onClick={handleZoom}
-                className="p-3 bg-purple-50 hover:bg-purple-100 rounded-lg font-semibold text-purple-600 transition-colors"
-              >
-                🔍 Zoom
-              </button>
-              <button
-                onClick={() => setShowSettings(true)}
-                className="p-3 bg-orange-50 hover:bg-orange-100 rounded-lg font-semibold text-orange-600 transition-colors"
-              >
-                ⚙️ Settings
-              </button>
-            </div>
-          </div>
-
-          {/* Gallery Modal */}
-          {showGallery && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">Snapshot Gallery</h2>
-                    <p className="text-sm text-gray-500">Automatic 8:00 AM captures</p>
-                  </div>
-                  <button
-                    onClick={() => setShowGallery(false)}
-                    className="text-gray-500 hover:text-gray-700 text-3xl leading-none w-8 h-8 flex items-center justify-center"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="p-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {GALLERY_SNAPSHOTS.map((snapshot) => (
-                      <div
-                        key={snapshot.id}
-                        className="bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200 hover:border-emerald-400 transition-colors cursor-pointer"
-                      >
-                        <div className="aspect-square bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-6xl">
-                          {snapshot.thumbnail}
-                        </div>
-                        <div className="p-3 bg-white">
-                          <div className="font-semibold text-gray-900 text-sm">
-                            {snapshot.date}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {snapshot.time}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => setShowGallery(false)}
-                    className="w-full mt-4 p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition-colors"
-                  >
-                    Close Gallery
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Settings Modal */}
-          {showSettings && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900">Camera Settings</h2>
-                  <button
-                    onClick={() => setShowSettings(false)}
-                    className="text-gray-500 hover:text-gray-700 text-3xl leading-none w-8 h-8 flex items-center justify-center"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                <div className="p-4 space-y-6">
-                  {/* Resolution - Pi Camera V2/V3 supported */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Resolution
-                    </label>
-                    <select
-                      value={settings.resolution}
-                      onChange={(e) => handleSettingChange("resolution", e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg bg-white"
-                    >
-                      <option value="720p">720p (HD)</option>
-                      <option value="1080p">1080p (Full HD)</option>
-                    </select>
-                  </div>
-
-                  {/* FPS - Pi Camera realistic limits */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Frame Rate (FPS)
-                    </label>
-                    <select
-                      value={settings.fps}
-                      onChange={(e) => handleSettingChange("fps", Number(e.target.value))}
-                      className="w-full p-3 border border-gray-300 rounded-lg bg-white"
-                    >
-                      <option value={15}>15 FPS</option>
-                      <option value={30}>30 FPS</option>
-                    </select>
-                  </div>
-
-                  {/* Brightness */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Brightness: {settings.brightness}%
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={settings.brightness}
-                      onChange={(e) => handleSettingChange("brightness", Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Contrast */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Contrast: {settings.contrast}%
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={settings.contrast}
-                      onChange={(e) => handleSettingChange("contrast", Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Detection Sensitivity */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      AI Detection Sensitivity: {settings.detectionSensitivity}%
-                    </label>
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={settings.detectionSensitivity}
-                      onChange={(e) => handleSettingChange("detectionSensitivity", Number(e.target.value))}
-                      className="w-full h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer"
-                    />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Higher sensitivity detects more kale but may increase false positives
-                    </p>
-                  </div>
-
-                  {/* Motion Detection */}
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                    <div>
-                      <div className="font-semibold text-gray-900">Motion Detection</div>
-                      <div className="text-xs text-gray-500">Alert on movement detection</div>
-                    </div>
-                    <label className="relative inline-block w-12 h-6">
-                      <input
-                        type="checkbox"
-                        checked={settings.motionDetection}
-                        onChange={(e) => handleSettingChange("motionDetection", e.target.checked)}
-                        className="sr-only peer"
-                      />
-                      <div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
-                    </label>
-                  </div>
-
-                  {/* Save and Close Buttons */}
-                  <div className="space-y-3">
-                    <button
-                      onClick={() => {
-                        setShowSettings(false)
-                        alert("✅ Settings saved successfully!")
-                      }}
-                      className="w-full p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-lg transition-colors"
-                    >
-                      Save Settings
-                    </button>
-                    <button
-                      onClick={() => setShowSettings(false)}
-                      className="w-full p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition-colors"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+    return (
+        <div className={`${baseClasses} ${colorClasses}`}>
+            <span className="font-medium">{message}</span>
+            <button onClick={onClose} className="p-1 rounded-full hover:bg-white/20">
+                <X className="w-4 h-4" />
+            </button>
         </div>
-      </div>
-    </div>
-  )
+    );
+};
+
+
+// --- Main App Component ---
+
+export default function App() {
+    // State variables are now explicitly typed (fixes 'any' errors)
+    const [currentTime, setCurrentTime] = useState<Date>(new Date())
+    const [showSettings, setShowSettings] = useState<boolean>(false)
+    const [showGallery, setShowGallery] = useState<boolean>(false)
+
+    // Fixes TS2345 errors: allows null OR Snapshot object
+    const [selectedSnapshot, setSelectedSnapshot] = useState<Snapshot | null>(null)
+
+    const [settings, setSettings] = useState<SettingsState>({
+        resolution: "1080p",
+        fps: 30,
+        brightness: 50,
+        contrast: 50,
+        detectionSensitivity: 75,
+        autoFocus: true,
+        nightMode: false,
+        motionDetection: true,
+    })
+
+    // Toast state typed
+    const [toast, setToast] = useState<{ message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default' }>({ message: '', visible: false, color: 'info' });
+
+    // Function parameters are explicitly typed (fixes 'any' errors)
+    const showToast = (message: string, color: 'success' | 'info' | 'warning' | 'default' = 'info'): void => {
+        setToast({ message, visible: true, color });
+        setTimeout(() => {
+            setToast(prev => ({ ...prev, visible: false }));
+        }, 3000); // Hide after 3 seconds
+    };
+
+    // Clock interval
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(new Date())
+        }, 1000)
+        return () => clearInterval(interval)
+    }, [])
+
+    // Function parameters are explicitly typed (fixes 'any' errors)
+    const handleSettingChange = (key: keyof SettingsState, value: string | number | boolean): void => {
+        setSettings(prev => ({ ...prev, [key]: value }))
+    }
+
+    const handleSnapshot = (): void => {
+        setShowGallery(true)
+        showToast("Snapshot gallery opened!", 'info');
+    }
+
+    const handleRecord = (): void => {
+        showToast("🎥 Recording started! Click the button again to stop.", 'info');
+    }
+
+    const handleZoom = (): void => {
+        showToast("🔍 Zoom controls activated. Use virtual controls for adjustments.", 'info');
+    }
+
+    const handleSaveSettings = (): void => {
+        setShowSettings(false);
+        showToast("✅ Settings saved successfully!", 'success');
+    }
+
+    const handleDownload = (): void => {
+        showToast("📥 Download request sent. File processing...", 'success');
+    }
+
+    const handleDelete = (): void => {
+        showToast("🗑️ Snapshot deleted successfully.", 'warning');
+        // Simulate navigation back to gallery after deletion
+        setSelectedSnapshot(null);
+    }
+
+
+    return (
+        <div className="min-h-screen bg-gray-50 font-sans">
+            <div className="max-w-2xl mx-auto p-4">
+                <div className="space-y-5 pb-24">
+                    <h1 className="text-3xl font-extrabold text-gray-800 pt-2">
+                        Hydroponic Camera Monitor
+                    </h1>
+                    <p className="text-gray-500 -mt-3">Real-time surveillance and health analysis for your Kale Tower.</p>
+
+                    {/* Camera Feed */}
+                    <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group shadow-xl">
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
+                            <div className="text-center text-white">
+                                <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                                <div className="text-lg font-semibold">Live Kale Tower Feed</div>
+                                <div className="text-sm opacity-70">AI Plant Detection Active</div>
+                            </div>
+                        </div>
+                        {/* Live indicator */}
+                        <div className="absolute top-4 right-4 bg-red-500 w-4 h-4 rounded-full animate-pulse shadow-md"></div>
+                        {/* Time and Specs */}
+                        <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
+                            <div className="text-sm font-semibold font-mono">
+                                {currentTime.toLocaleTimeString()}
+                            </div>
+                            <div className="text-xs text-gray-300">{settings.resolution} • {settings.fps}fps • Live</div>
+                        </div>
+                        {/* Detection Summary */}
+                        <div className="absolute bottom-4 right-4 bg-emerald-600/90 px-3 py-2 rounded-lg text-white font-semibold shadow-md backdrop-blur-sm">
+                            <div className="text-xs">4 Kales Detected</div>
+                        </div>
+                    </div>
+
+                    {/* AI Detection Results */}
+                    <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                        <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                            <span className="text-emerald-500">AI</span> Plant Health Status
+                        </h3>
+                        <div className="space-y-3">
+                            {PLANT_DETECTIONS.map((plant, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
+                                        ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
+                                        : "bg-amber-50 border border-amber-200 hover:shadow-md"
+                                        }`}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
+                                        ></div>
+                                        <span className="font-medium text-gray-900">{plant.name}</span>
+                                    </div>
+                                    <span
+                                        className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
+                                    >
+                                        {plant.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Camera Controls */}
+                    <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                        <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                            Action Center
+                        </h3>
+                        <div className="grid grid-cols-2 gap-3">
+                            <button
+                                onClick={handleSnapshot}
+                                className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                            >
+                                📸 Gallery
+                            </button>
+                            <button
+                                onClick={handleRecord}
+                                className="p-4 bg-blue-100 hover:bg-blue-200 rounded-xl font-bold text-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                            >
+                                🎥 Record
+                            </button>
+                            <button
+                                onClick={handleZoom}
+                                className="p-4 bg-purple-100 hover:bg-purple-200 rounded-xl font-bold text-purple-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                            >
+                                🔍 Zoom
+                            </button>
+                            <button
+                                onClick={() => setShowSettings(true)}
+                                className="p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                            >
+                                ⚙️ Settings
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            {/* Toast Notification */}
+            <Toast
+                message={toast.message}
+                visible={toast.visible}
+                color={toast.color}
+                onClose={() => setToast(prev => ({ ...prev, visible: false }))}
+            />
+
+            {/* Gallery Modal */}
+            {showGallery && !selectedSnapshot && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-2xl">
+                            <div>
+                                <h2 className="text-xl font-bold text-gray-900">Snapshot Gallery</h2>
+                                <p className="text-sm text-gray-500">Automatic 8:00 AM captures</p>
+                            </div>
+                            <button
+                                onClick={() => setShowGallery(false)}
+                                className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-4">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                {GALLERY_SNAPSHOTS.map((snapshot) => (
+                                    <div
+                                        key={snapshot.id}
+                                        onClick={() => setSelectedSnapshot(snapshot)}
+                                        className="bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200 hover:border-emerald-400 transition-all cursor-pointer shadow-md"
+                                    >
+                                        <div className="aspect-square bg-gradient-to-br from-emerald-50/50 to-teal-100/50 flex items-center justify-center text-5xl sm:text-6xl">
+                                            {snapshot.thumbnail}
+                                        </div>
+                                        <div className="p-3 bg-white">
+                                            <div className="font-semibold text-gray-900 text-sm">
+                                                {snapshot.date}
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                                {snapshot.time}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button
+                                onClick={() => setShowGallery(false)}
+                                className="w-full mt-4 p-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]"
+                            >
+                                Close Gallery
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Full View Modal - UPDATED for mobile responsiveness */}
+            {selectedSnapshot && (
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+                    {/* The outer container now enforces a max height and uses flex to control inner elements */}
+                    <div className="max-w-4xl w-full h-full max-h-[95vh] flex flex-col">
+                        <div className="flex items-center justify-between mb-4 flex-shrink-0">
+                            <button
+                                onClick={() => setSelectedSnapshot(null)}
+                                className="flex items-center gap-2 text-white hover:text-emerald-400 transition-colors font-semibold"
+                            >
+                                <span className="text-2xl">←</span>
+                                Back to Gallery
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setSelectedSnapshot(null)
+                                    setShowGallery(false)
+                                }}
+                                className="text-white hover:text-red-500 transition-colors p-2 rounded-full"
+                            >
+                                <X className="w-8 h-8" />
+                            </button>
+                        </div>
+
+                        {/* This main content wrapper now scrolls if needed */}
+                        <div className="bg-white rounded-2xl shadow-2xl overflow-y-auto flex-grow min-h-0">
+                            {selectedSnapshot ? (
+                                <>
+                                    <div className="aspect-square bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-[8rem] sm:text-[10rem]">
+                                        {selectedSnapshot.thumbnail}
+                                    </div>
+                                    <div className="p-6 bg-white">
+                                        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                                            Snapshot - {selectedSnapshot.date}
+                                        </h3>
+                                        <p className="text-gray-500 mb-4">
+                                            Captured at {selectedSnapshot.time}
+                                        </p>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <button
+                                                onClick={handleDownload}
+                                                className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                                            >
+                                                <Download className="w-5 h-5" />
+                                                Download
+                                            </button>
+                                            <button
+                                                onClick={handleDelete}
+                                                className="p-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"
+                                            >
+                                                <Trash2 className="w-5 h-5" />
+                                                Delete
+                                            </button>
+                                        </div>
+                                        <button
+                                            onClick={() => {
+                                                setSelectedSnapshot(null)
+                                                setShowGallery(false)
+                                            }}
+                                            className="w-full mt-4 p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]"
+                                        >
+                                            Close & Exit
+                                        </button>
+                                    </div>
+                                </>
+                            ) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-2xl">
+                            <h2 className="text-xl font-bold text-gray-900">Camera Settings</h2>
+                            <button
+                                onClick={() => setShowSettings(false)}
+                                className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div className="p-4 space-y-6">
+                            {/* Resolution */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Resolution
+                                </label>
+                                <select
+                                    value={settings.resolution}
+                                    onChange={(e) => handleSettingChange("resolution", e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-emerald-500 focus:border-emerald-500"
+                                >
+                                    <option value="720p">720p (HD)</option>
+                                    <option value="1080p">1080p (Full HD)</option>
+                                </select>
+                            </div>
+
+                            {/* FPS */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Frame Rate (FPS)
+                                </label>
+                                <select
+                                    value={settings.fps}
+                                    onChange={(e) => handleSettingChange("fps", Number(e.target.value))}
+                                    className="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-emerald-500 focus:border-emerald-500"
+                                >
+                                    <option value={15}>15 FPS</option>
+                                    <option value={30}>30 FPS</option>
+                                </select>
+                            </div>
+
+                            {/* Brightness */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Brightness: <span className="text-emerald-600 font-bold">{settings.brightness}%</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={settings.brightness}
+                                    onChange={(e) => handleSettingChange("brightness", Number(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg accent-emerald-500"
+                                />
+                            </div>
+
+                            {/* Contrast */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    Contrast: <span className="text-emerald-600 font-bold">{settings.contrast}%</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={settings.contrast}
+                                    onChange={(e) => handleSettingChange("contrast", Number(e.target.value))}
+                                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                />
+                            </div>
+
+                            {/* AI Sensitivity */}
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    AI Detection Sensitivity: <span className="text-emerald-600 font-bold">{settings.detectionSensitivity}%</span>
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={settings.detectionSensitivity}
+                                    onChange={(e) => handleSettingChange("detectionSensitivity", Number(e.target.value))}
+                                    className="w-full h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Higher sensitivity detects more kale but may increase false positives
+                                </p>
+                            </div>
+
+                            {/* Motion Detection Toggle */}
+                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                <div>
+                                    <div className="font-semibold text-gray-900">Motion Detection</div>
+                                    <div className="text-xs text-gray-500">Alert on movement detection</div>
+                                </div>
+                                <label className="relative inline-block w-12 h-6">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.motionDetection}
+                                        onChange={(e) => handleSettingChange("motionDetection", e.target.checked)}
+                                        className="sr-only peer"
+                                    />
+                                    <div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div>
+                                </label>
+                            </div>
+
+                            {/* Save and Close Buttons */}
+                            <div className="space-y-3 pt-2">
+                                <button
+                                    onClick={handleSaveSettings}
+                                    className="w-full p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors shadow-lg hover:shadow-xl active:scale-[0.99]"
+                                >
+                                    Save Settings
+                                </button>
+                                <button
+                                    onClick={() => setShowSettings(false)}
+                                    className="w-full p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
 }
