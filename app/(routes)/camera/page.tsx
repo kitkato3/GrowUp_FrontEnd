@@ -6,40 +6,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 // --- TYPE DEFINITIONS ---
+interface PlantDetection { name: string; status: string; color: 'emerald' | 'amber'; }
+interface Snapshot { id: number; date: string; time: string; thumbnail: string; }
+interface SettingsState { resolution: string; fps: number; brightness: number; contrast: number; detectionSensitivity: number; autoFocus: boolean; nightMode: boolean; motionDetection: boolean; }
+interface ToastProps { message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default'; onClose: () => void; }
 
-interface PlantDetection {
-    name: string;
-    status: string;
-    color: 'emerald' | 'amber';
-}
-
-interface Snapshot {
-    id: number;
-    date: string;
-    time: string;
-    thumbnail: string;
-}
-
-interface SettingsState {
-    resolution: string;
-    fps: number;
-    brightness: number;
-    contrast: number;
-    detectionSensitivity: number;
-    autoFocus: boolean;
-    nightMode: boolean;
-    motionDetection: boolean;
-}
-
-interface ToastProps {
-    message: string;
-    visible: boolean;
-    color: 'success' | 'info' | 'warning' | 'default';
-    onClose: () => void;
-}
-
-// --- Mock Data ---
-
+// --- MOCK DATA ---
 const PLANT_DETECTIONS: PlantDetection[] = [
     { name: "Kale #1", status: "Healthy", color: "emerald" },
     { name: "Kale #2", status: "Growing", color: "emerald" },
@@ -57,7 +29,6 @@ const GALLERY_SNAPSHOTS: Snapshot[] = [
 ]
 
 // --- Helper Functions ---
-
 const formatDuration = (seconds: number): string => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -69,8 +40,25 @@ const formatDuration = (seconds: number): string => {
     return formatted.startsWith("0") && formatted.length > 2 ? formatted.substring(1) : formatted;
 }
 
-// --- Toast Component ---
+const simulateDownloadFn = (mimeType: string, filename: string, contentLabel: string, duration?: number): void => {
+    let mockContent = `Mock ${contentLabel} data captured at ${new Date().toLocaleString()}.`;
+    if (duration) { mockContent += ` Duration: ${formatDuration(duration)}.`; }
+    const blob = new Blob([mockContent], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
 
+    setTimeout(() => {
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 10);
+}
+
+
+// --- Toast Component ---
 const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     if (!visible) return null;
 
@@ -78,25 +66,54 @@ const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     let colorClasses = "";
 
     switch (color) {
-        case 'success':
-            colorClasses = "bg-emerald-600 text-white";
-            break;
-        case 'info':
-            colorClasses = "bg-blue-600 text-white";
-            break;
-        case 'warning':
-            colorClasses = "bg-amber-600 text-white";
-            break;
-        default:
-            colorClasses = "bg-gray-800 text-white";
+        case 'success': colorClasses = "bg-emerald-600 text-white"; break;
+        case 'info': colorClasses = "bg-blue-600 text-white"; break;
+        case 'warning': colorClasses = "bg-amber-600 text-white"; break;
+        default: colorClasses = "bg-gray-800 text-white";
     }
 
     return (
         <div className={`${baseClasses} ${colorClasses}`}>
             <span className="font-medium">{message}</span>
-            <button onClick={onClose} className="p-1 rounded-full hover:bg-white/20">
-                <X className="w-4 h-4" />
-            </button>
+            <button onClick={onClose} className="p-1 rounded-full hover:bg-white/20"><X className="w-4 h-4" /></button>
+        </div>
+    );
+};
+
+// --- NAVIGATION COMPONENTS (Local definitions) ---
+const Navbar: React.FC<{ time: string }> = ({ time }) => (
+    <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
+        <span className="font-bold text-gray-900">GROWUP</span>
+        <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+            <span className="text-xs text-gray-600">{time}</span>
+        </div>
+    </div>
+);
+
+const BottomNavigation = () => {
+    const pathname = usePathname();
+    const tabs = [
+        { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
+        { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
+        { id: "camera", label: "Camera", href: "/camera", icon: Camera },
+        { id: "settings", label: "Settings", href: "/settings", icon: Settings },
+    ];
+
+    return (
+        <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
+            <div className="flex items-center justify-around py-3">
+                {tabs.map((tab) => {
+                    const isActive = pathname.startsWith(tab.href);
+                    const Icon = tab.icon;
+                    return (
+                        <Link key={tab.id} href={tab.href} className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}>
+                            <Icon className="w-5 h-5 mb-1" />
+                            <span className="text-xs font-semibold">{tab.label}</span>
+                        </Link>
+                    );
+                })}
+            </div>
         </div>
     );
 };
@@ -131,16 +148,12 @@ export default function App() {
 
     const showToast = useCallback((message: string, color: 'success' | 'info' | 'warning' | 'default' = 'info'): void => {
         setToast({ message, visible: true, color });
-        setTimeout(() => {
-            setToast(prev => ({ ...prev, visible: false }));
-        }, 3000);
+        setTimeout(() => { setToast(prev => ({ ...prev, visible: false })); }, 3000);
     }, []);
 
     // Clock update effect
     useEffect(() => {
-        const interval = setInterval(() => {
-            setCurrentTime(new Date())
-        }, 1000)
+        const interval = setInterval(() => { setCurrentTime(new Date()) }, 1000)
         return () => clearInterval(interval)
     }, [])
 
@@ -148,21 +161,17 @@ export default function App() {
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isRecording) {
-            interval = setInterval(() => {
-                setRecordingDuration(prevDuration => prevDuration + 1);
-            }, 1000);
+            interval = setInterval(() => { setRecordingDuration(prevDuration => prevDuration + 1); }, 1000);
         } else if (!isRecording && recordingDuration > 0) {
             // Logic to simulate video saving after stopping
             if (recordingDuration >= 3) {
-                simulateDownload('video/mp4', `kale_video_${new Date().toISOString()}.mp4`, 'Recorded Video', recordingDuration);
+                simulateDownloadFn('video/mp4', `kale_video_${new Date().toISOString()}.mp4`, 'Recorded Video', recordingDuration);
             } else if (recordingDuration > 0) {
                 showToast("Recording too short, file discarded.", 'warning');
             }
             setRecordingDuration(0);
         }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
+        return () => { if (interval) clearInterval(interval); };
     }, [isRecording, recordingDuration, showToast]);
 
 
@@ -170,35 +179,14 @@ export default function App() {
         setSettings(prev => ({ ...prev, [key]: value }))
     }
 
-    // Function to simulate saving a file to the user's device
-    const simulateDownload = (mimeType: string, filename: string, contentLabel: string, duration?: number): void => {
-        // Fallback for creating a mock file in the browser for download
-        let mockContent = `Mock ${contentLabel} data captured at ${new Date().toLocaleString()}.`;
-        if (duration) {
-            mockContent += ` Duration: ${formatDuration(duration)}.`;
-        }
-
-        const blob = new Blob([mockContent], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-
-        // Use setTimeout to ensure the browser has time to register the element before clicking
-        setTimeout(() => {
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast(`Downloaded & saved to device photos: ${filename}`, 'success');
-        }, 10);
+    const handleDownload = (): void => { // Functionality moved inside App() to be accessible
+        showToast("📥 Download request sent. File processing...", 'success');
     }
 
 
     const handleSnapshot = (): void => {
         // Simulate a screenshot and its immediate download (save to photos)
-        simulateDownload('image/png', `kale_snapshot_${new Date().toISOString().slice(0, 19).replace(/[:T-]/g, "")}.png`, "Kale Tower Snapshot");
+        simulateDownloadFn('image/png', `kale_snapshot_${new Date().toISOString().slice(0, 19).replace(/[:T-]/g, "")}.png`, "Kale Tower Snapshot");
     }
 
     const handleRecord = (): void => {
@@ -233,185 +221,173 @@ export default function App() {
     }
 
     const handleGalleryDownload = (snapshot: Snapshot): void => {
-        simulateDownload('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
+        simulateDownloadFn('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
     }
 
     const handleDelete = (): void => {
         showToast("🗑️ Snapshot deleted successfully.", 'warning');
         setSelectedSnapshot(null);
-        // Note: In a real app, this would delete the file from storage (Firestore/Cloud Storage)
     }
 
 
     return (
-        // ***************************************************************************************************
-        // FINAL MONOLITHIC LAYOUT: All structural elements are contained within this page component.
-        // ***************************************************************************************************
         <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
-            {/* Top Layout Div: This contains the Navbar and the main content area with its padding */}
-            <div className="max-w-md mx-auto">
+            <Navbar time={currentTime.toLocaleTimeString()} />
 
-                {/* Navbar */}
-                <Navbar time={currentTime.toLocaleTimeString()} />
+            <div className="space-y-5 pb-24 px-4 py-5">
+                <h1 className="text-3xl font-extrabold text-gray-800 pt-2">
+                    Hydroponic Camera Monitor
+                </h1>
+                <p className="text-gray-500 -mt-3">Real-time surveillance and health analysis for your Kale Tower.</p>
 
-                {/* Main Content Area */}
-                <div className="space-y-5 pb-24 px-4 py-5">
-                    <h1 className="text-3xl font-extrabold text-gray-800 pt-2">
-                        Hydroponic Camera Monitor
-                    </h1>
-                    <p className="text-gray-500 -mt-3">Real-time surveillance and health analysis for your Kale Tower.</p>
-
-                    {/* Camera Feed */}
-                    <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group shadow-xl">
-                        {/* Zoom Wrapper to apply transformation */}
-                        <div
-                            className="absolute inset-0 transition-transform duration-300 ease-in-out"
-                            style={{ transform: `scale(${zoomLevel})` }}
-                        >
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
-                                <div className="text-center text-white">
-                                    <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                                    <div className="text-lg font-semibold">Live Kale Tower Feed</div>
-                                    <div className="text-sm opacity-70">AI Plant Detection Active</div>
-                                </div>
-                            </div>
-
-                            {/* Recording Duration Indicator */}
-                            {isRecording && (
-                                <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded-xl font-bold text-sm shadow-md backdrop-blur-sm">
-                                    REC {formatDuration(recordingDuration)}
-                                </div>
-                            )}
-
-                            {/* Live/Recording indicator */}
-                            <div className={`absolute top-4 right-4 w-4 h-4 rounded-full shadow-md ${isRecording ? 'bg-red-600 animate-pulse' : 'bg-green-500'}`}></div>
-
-                            {/* Time and Specs */}
-                            <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
-                                <div className="text-sm font-semibold font-mono">
-                                    {currentTime.toLocaleTimeString()}
-                                </div>
-                                <div className="text-xs text-gray-300">
-                                    {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : 'Live'}
-                                </div>
+                {/* Camera Feed */}
+                <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group shadow-xl">
+                    {/* Zoom Wrapper to apply transformation */}
+                    <div
+                        className="absolute inset-0 transition-transform duration-300 ease-in-out"
+                        style={{ transform: `scale(${zoomLevel})` }}
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
+                            <div className="text-center text-white">
+                                <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                                <div className="text-lg font-semibold">Live Kale Tower Feed</div>
+                                <div className="text-sm opacity-70">AI Plant Detection Active</div>
                             </div>
                         </div>
 
-                        {/* Detection Summary (Outside Zoom Transform) */}
-                        <div className="absolute bottom-4 right-4 bg-emerald-600/90 px-3 py-2 rounded-lg text-white font-semibold shadow-md backdrop-blur-sm">
-                            <div className="text-xs">4 Kales Detected</div>
-                        </div>
-                    </div>
+                        {/* Recording Duration Indicator */}
+                        {isRecording && (
+                            <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded-xl font-bold text-sm shadow-md backdrop-blur-sm">
+                                REC {formatDuration(recordingDuration)}
+                            </div>
+                        )}
 
-                    {/* Zoom Slider Controls */}
-                    {showZoomControls && (
-                        <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                            <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                                Zoom Level: <span className="text-purple-600">{zoomLevel.toFixed(1)}x</span>
-                            </h3>
-                            <input
-                                type="range"
-                                min="1.0"
-                                max="4.0"
-                                step="0.1"
-                                value={zoomLevel}
-                                onChange={handleZoomChange}
-                                className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                            />
-                            <div className="flex justify-between text-sm text-gray-500 mt-2">
-                                <span>1x (Wide)</span>
-                                <span>4x (Macro)</span>
+                        {/* Live/Recording indicator */}
+                        <div className={`absolute top-4 right-4 w-4 h-4 rounded-full shadow-md ${isRecording ? 'bg-red-600 animate-pulse' : 'bg-green-500'}`}></div>
+
+                        {/* Time and Specs */}
+                        <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
+                            <div className="text-sm font-semibold font-mono">
+                                {currentTime.toLocaleTimeString()}
+                            </div>
+                            <div className="text-xs text-gray-300">
+                                {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : 'Live'}
                             </div>
                         </div>
-                    )}
-
-
-                    {/* AI Detection Results */}
-                    <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                        <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                            <span className="text-emerald-500">AI</span> Plant Health Status
-                        </h3>
-                        <div className="space-y-3">
-                            {PLANT_DETECTIONS.map((plant, idx) => (
-                                <div
-                                    key={idx}
-                                    className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
-                                        ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
-                                        : "bg-amber-50 border border-amber-200 hover:shadow-md"
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
-                                        ></div>
-                                        <span className="font-medium text-gray-900">{plant.name}</span>
-                                    </div>
-                                    <span
-                                        className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
-                                    >
-                                        {plant.status}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
                     </div>
 
-                    {/* Camera Controls */}
-                    <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                        <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                            Action Center
-                        </h3>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                onClick={handleSnapshot}
-                                className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                            >
-                                📸 Snapshot
-                            </button>
-                            <button
-                                onClick={handleRecord}
-                                className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${isRecording
-                                    ? "bg-red-500 hover:bg-red-600 text-white"
-                                    : "bg-blue-100 hover:bg-blue-200 text-blue-700"
-                                    }`}
-                            >
-                                {isRecording ? (
-                                    <span className="inline-flex items-center gap-2">
-                                        <span className="animate-ping inline-block w-3 h-3 bg-white rounded-full"></span>
-                                        STOP ({formatDuration(recordingDuration)})
-                                    </span>
-                                ) : (
-                                    "🎥 Record"
-                                )}
-                            </button>
-                            <button
-                                onClick={() => setShowGallery(true)}
-                                className="p-4 bg-amber-100 hover:bg-amber-200 rounded-xl font-bold text-amber-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                            >
-                                🖼️ Gallery
-                            </button>
-                            <button
-                                onClick={handleZoomToggle}
-                                className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${showZoomControls
-                                    ? "bg-purple-500 hover:bg-purple-600 text-white"
-                                    : "bg-purple-100 hover:bg-purple-200 text-purple-700"
-                                    }`}
-                            >
-                                🔍 Zoom ({zoomLevel.toFixed(1)}x)
-                            </button>
-                            <button
-                                onClick={() => setShowSettings(true)}
-                                className="p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                            >
-                                ⚙️ Settings
-                            </button>
-                        </div>
+                    {/* Detection Summary (Outside Zoom Transform) */}
+                    <div className="absolute bottom-4 right-4 bg-emerald-600/90 px-3 py-2 rounded-lg text-white font-semibold shadow-md backdrop-blur-sm">
+                        <div className="text-xs">4 Kales Detected</div>
                     </div>
-
                 </div>
+
+                {/* Zoom Slider Controls */}
+                {showZoomControls && (
+                    <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                        <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                            Zoom Level: <span className="text-purple-600">{zoomLevel.toFixed(1)}x</span>
+                        </h3>
+                        <input
+                            type="range"
+                            min="1.0"
+                            max="4.0"
+                            step="0.1"
+                            value={zoomLevel}
+                            onChange={handleZoomChange}
+                            className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                        />
+                        <div className="flex justify-between text-sm text-gray-500 mt-2">
+                            <span>1x (Wide)</span>
+                            <span>4x (Macro)</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* AI Detection Results */}
+                <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                    <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                        <span className="text-emerald-500">AI</span> Plant Health Status
+                    </h3>
+                    <div className="space-y-3">
+                        {PLANT_DETECTIONS.map((plant, idx) => (
+                            <div
+                                key={idx}
+                                className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
+                                    ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
+                                    : "bg-amber-50 border border-amber-200 hover:shadow-md"
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
+                                    ></div>
+                                    <span className="font-medium text-gray-900">{plant.name}</span>
+                                </div>
+                                <span
+                                    className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
+                                >
+                                    {plant.status}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Camera Controls */}
+                <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                    <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                        Action Center
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={handleSnapshot}
+                            className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                        >
+                            📸 Snapshot
+                        </button>
+                        <button
+                            onClick={handleRecord}
+                            className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${isRecording
+                                ? "bg-red-500 hover:bg-red-600 text-white"
+                                : "bg-blue-100 hover:bg-blue-200 text-blue-700"
+                                }`}
+                        >
+                            {isRecording ? (
+                                <span className="inline-flex items-center gap-2">
+                                    <span className="animate-ping inline-block w-3 h-3 bg-white rounded-full"></span>
+                                    STOP ({formatDuration(recordingDuration)})
+                                </span>
+                            ) : (
+                                "🎥 Record"
+                            )}
+                        </button>
+                        <button
+                            onClick={() => setShowGallery(true)}
+                            className="p-4 bg-amber-100 hover:bg-amber-200 rounded-xl font-bold text-amber-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                        >
+                            🖼️ Gallery
+                        </button>
+                        <button
+                            onClick={handleZoomToggle}
+                            className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${showZoomControls
+                                ? "bg-purple-500 hover:bg-purple-600 text-white"
+                                : "bg-purple-100 hover:bg-purple-200 text-purple-700"
+                                }`}
+                        >
+                            🔍 Zoom ({zoomLevel.toFixed(1)}x)
+                        </button>
+                        <button
+                            onClick={() => setShowSettings(true)}
+                            className="p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                        >
+                            ⚙️ Settings
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
-            {/* Bottom Navigation */}
             <BottomNavigation />
 
             {/* Toast Notification */}
