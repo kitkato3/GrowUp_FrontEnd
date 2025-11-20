@@ -179,14 +179,21 @@ export default function App() {
         setSettings(prev => ({ ...prev, [key]: value }))
     }
 
-    const handleDownload = (): void => { // Functionality moved inside App() to be accessible
-        showToast("📥 Download request sent. File processing...", 'success');
+    // HANDLED DOWNLOAD: This function is now responsible for downloading the FULL VIEW snapshot
+    const handleDownload = (): void => {
+        if (selectedSnapshot) {
+            handleGalleryDownload(selectedSnapshot);
+        } else {
+            // Placeholder: If button is accidentally visible outside of modal
+            showToast("Error: No snapshot selected for download.", 'warning');
+        }
     }
 
-
+    // FUNCTIONALITY REMOVED: handleSnapshot (Removed saving from main Action Center)
     const handleSnapshot = (): void => {
-        // Simulate a screenshot and its immediate download (save to photos)
-        simulateDownloadFn('image/png', `kale_snapshot_${new Date().toISOString().slice(0, 19).replace(/[:T-]/g, "")}.png`, "Kale Tower Snapshot");
+        // Instead of saving, this button will now just open the gallery, if desired, 
+        // but for simplicity, we'll keep the Gallery button separate.
+        showToast("Use the Gallery button to view and download snapshots.", 'info');
     }
 
     const handleRecord = (): void => {
@@ -221,7 +228,9 @@ export default function App() {
     }
 
     const handleGalleryDownload = (snapshot: Snapshot): void => {
+        // Renamed from handleDownload to avoid recursive loop, now performs the file saving logic
         simulateDownloadFn('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
+        showToast(`Downloaded & saved: ${snapshot.date}`, 'success');
     }
 
     const handleDelete = (): void => {
@@ -341,10 +350,11 @@ export default function App() {
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
                         <button
-                            onClick={handleSnapshot}
+                            // Removed handleSnapshot, button now opens Gallery directly
+                            onClick={() => setShowGallery(true)}
                             className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                         >
-                            📸 Snapshot
+                            🖼️ Gallery
                         </button>
                         <button
                             onClick={handleRecord}
@@ -361,12 +371,6 @@ export default function App() {
                             ) : (
                                 "🎥 Record"
                             )}
-                        </button>
-                        <button
-                            onClick={() => setShowGallery(true)}
-                            className="p-4 bg-amber-100 hover:bg-amber-200 rounded-xl font-bold text-amber-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                        >
-                            🖼️ Gallery
                         </button>
                         <button
                             onClick={handleZoomToggle}
@@ -437,7 +441,8 @@ export default function App() {
                                     <h3 className="text-2xl font-bold text-gray-900 mb-2">Snapshot - {selectedSnapshot.date}</h3>
                                     <p className="text-gray-500 mb-4">Captured at {selectedSnapshot.time}</p>
                                     <div className="grid grid-cols-2 gap-3">
-                                        <button onClick={handleDownload} className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Download className="w-5 h-5" />Download</button>
+                                        {/* CRITICAL FIX: handleDownload now performs the file saving logic */}
+                                        <button onClick={() => handleGalleryDownload(selectedSnapshot)} className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Download className="w-5 h-5" />Download</button>
                                         <button onClick={handleDelete} className="p-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Trash2 className="w-5 h-5" />Delete</button>
                                     </div>
                                     <button onClick={() => { setSelectedSnapshot(null); setShowGallery(false); }} className="w-full mt-4 p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close & Exit</button>
