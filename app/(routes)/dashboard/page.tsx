@@ -5,13 +5,13 @@ import { Thermometer, Droplets, Activity, Zap, Waves, Gauge, Wind, Fish, Chevron
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
-interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
-interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
-interface SensorCardProps { icon: React.ElementType; title: string; value: number; unit: string; min: number; max: number; color: string; }
-interface SensorDataState { waterTemp: number; ph: number; dissolvedO2: number; waterLevel: number; waterFlow: number; humidity: number; ammonia: number; lightIntensity: number; }
-interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string; }
-interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
+interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean }
+interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number } }
+interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean }
+interface SensorCardProps { icon: React.ElementType; title: string; value: number; unit: string; min: number; max: number; color: string }
+interface SensorDataState { waterTemp: number; ph: number; dissolvedO2: number; waterLevel: number; waterFlow: number; humidity: number; ammonia: number; lightIntensity: number }
+interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string }
+interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void }
 
 const ALERTS_DATA: AlertData[] = [
   { id: 1, type: "warning", severity: "medium", title: "pH Level Slightly Low", message: "Current pH is 6.2...", time: "5 minutes ago" },
@@ -19,26 +19,15 @@ const ALERTS_DATA: AlertData[] = [
 ]
 
 const INITIAL_SENSOR_DATA: SensorDataState = { waterTemp: 23.2, ph: 6.8, dissolvedO2: 7.2, waterLevel: 85, waterFlow: 4.5, humidity: 65, ammonia: 0.3, lightIntensity: 15000 }
-
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
 const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 } }
-const localStorageKey = 'aquaponics_settings_state';
+const localStorageKey = 'aquaponics_settings_state'
 
-const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => {
-  try {
-    const savedState = localStorage.getItem(localStorageKey)
-    if (savedState) return JSON.parse(savedState)
-  } catch { }
-  return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS }
-}
-
-const saveState = (state: { controls: SystemControls, activePreset: string, thresholds: ThresholdState }) => {
-  try { localStorage.setItem(localStorageKey, JSON.stringify(state)) } catch { }
-}
+const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS }; }
+const saveState = (state: { controls: SystemControls, activePreset: string, thresholds: ThresholdState }) => { try { localStorage.setItem(localStorageKey, JSON.stringify(state)); } catch (error) { console.error('Error saving state:', error); } }
 
 const useAquaponicsSettings = () => {
   const [state, setState] = useState(loadState)
-
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === localStorageKey && e.newValue) setState(JSON.parse(e.newValue))
@@ -46,33 +35,14 @@ const useAquaponicsSettings = () => {
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [])
-
-  const quickSaveControls = (newControls: SystemControls) => {
-    setState(prev => {
-      const newState = { ...prev, controls: newControls }
-      saveState(newState)
-      return newState
-    })
-  }
-
+  const quickSaveControls = (newControls: SystemControls) => { setState(prev => { const newState = { ...prev, controls: newControls }; saveState(newState); return newState }) }
   return { controls: state.controls, quickSaveControls }
 }
 
 type ThresholdStatus = "good" | "warning" | "critical"
-const getThresholdStatus = (value: number, min: number, max: number): ThresholdStatus => {
-  if (value < min || value > max) return "critical"
-  if (value < min + (max - min) * 0.1 || value > max - (max - min) * 0.1) return "warning"
-  return "good"
-}
-const getStatusColor = (status: ThresholdStatus): string => {
-  switch (status) {
-    case "good": return "bg-emerald-500"
-    case "warning": return "bg-amber-500"
-    case "critical": return "bg-red-500"
-    default: return "bg-gray-500"
-  }
-}
-const calculatePercentage = (value: number, min: number, max: number) => ((value - min) / (max - min)) * 100
+const getThresholdStatus = (value: number, min: number, max: number): ThresholdStatus => { if (value < min || value > max) return "critical"; if (value < min + (max - min) * 0.1 || value > max - (max - min) * 0.1) return "warning"; return "good" }
+const getStatusColor = (status: ThresholdStatus): string => { switch (status) { case "good": return "bg-emerald-500"; case "warning": return "bg-amber-500"; case "critical": return "bg-red-500"; default: return "bg-gray-500" } }
+const calculatePercentage = (value: number, min: number, max: number): number => ((value - min) / (max - min)) * 100
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -178,7 +148,7 @@ export default function Dashboard() {
   }
 
   const ControlsModal = () => {
-    const handleLocalControlChange = (key: keyof ControlState, val: boolean) => setLocalControls(prev => ({ ...prev, [key]: val }))
+    const handleLocalControlChange = (key: keyof ControlState, val: boolean) => { setLocalControls(prev => ({ ...prev, [key]: val })) }
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
         <div className="w-full bg-white rounded-t-3xl p-6 max-w-md mx-auto max-h-[80vh] overflow-y-auto">
@@ -187,11 +157,11 @@ export default function Dashboard() {
             <button onClick={() => setShowControlsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-6 h-6" /></button>
           </div>
           <div className="space-y-3">
-            <ControlToggle label="Submersible Pump" icon={Waves} active={localControls.pump} onChange={val => handleLocalControlChange('pump', val)} />
-            <ControlToggle label="DC Fan" icon={Wind} active={localControls.fan} onChange={val => handleLocalControlChange('fan', val)} />
-            <ControlToggle label="pH Adjustment" icon={Droplets} active={localControls.phAdjustment} onChange={val => handleLocalControlChange('phAdjustment', val)} />
-            <ControlToggle label="Aerator" icon={Activity} active={localControls.aerator} onChange={val => handleLocalControlChange('aerator', val)} />
-            <ControlToggle label="Grow Light" icon={Sun} active={localControls.growLight} onChange={val => handleLocalControlChange('growLight', val)} />
+            <ControlToggle label="Submersible Pump" icon={Waves} active={localControls.pump} onChange={(val) => handleLocalControlChange('pump', val)} />
+            <ControlToggle label="DC Fan" icon={Wind} active={localControls.fan} onChange={(val) => handleLocalControlChange('fan', val)} />
+            <ControlToggle label="pH Adjustment" icon={Droplets} active={localControls.phAdjustment} onChange={(val) => handleLocalControlChange('phAdjustment', val)} />
+            <ControlToggle label="Aerator" icon={Activity} active={localControls.aerator} onChange={(val) => handleLocalControlChange('aerator', val)} />
+            <ControlToggle label="Grow Light" icon={Sun} active={localControls.growLight} onChange={(val) => handleLocalControlChange('growLight', val)} />
           </div>
           <button onClick={handleQuickControlsSave} className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">Done</button>
         </div>
@@ -207,10 +177,7 @@ export default function Dashboard() {
       </div>
       <div className="flex-1 bg-gray-900 flex items-center justify-center relative">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/40 flex items-center justify-center">
-          <div className="text-center text-white">
-            <Camera className="w-20 h-20 mx-auto mb-4 opacity-50" />
-            <div className="text-xl font-semibold">Live Tower Feed</div>
-          </div>
+          <div className="text-center text-white"><Camera className="w-20 h-20 mx-auto mb-4 opacity-50" /><div className="text-xl font-semibold">Live Tower Feed</div></div>
         </div>
       </div>
     </div>
@@ -228,28 +195,66 @@ export default function Dashboard() {
             </div>
             <div className="text-right">
               <div className="text-2xl font-bold">{currentTime.toLocaleTimeString()}</div>
-              <div className="text-xs text-emerald-100 flex items-center justify-end gap-1 mt-1">
-                <div className="w-2 h-2 bg-emerald-300 rounded-full animate-pulse"></div>Live
-              </div>
+              <div className="text-xs text-emerald-100 flex items-center justify-end gap-1 mt-1"><div className="w-2 h-2 bg-emerald-300 rounded-full animate-pulse"></div>Live</div>
             </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="bg-white/20 rounded-lg p-2"><div className="text-xs text-emerald-100">Plants</div><div className="text-xl font-bold">4</div></div>
+            <div className="bg-white/20 rounded-lg p-2"><div className="text-xs text-emerald-100">Health</div><div className="text-xl font-bold">94%</div></div>
+            <div className="bg-white/20 rounded-lg p-2"><div className="text-xs text-emerald-100">Uptime</div><div className="text-xl font-bold">99.8%</div></div>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-            <div>
-              <div className="font-semibold text-gray-900">System Healthy</div>
-              <div className="text-xs text-gray-500">All sensors operational</div>
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
+              <div>
+                <div className="font-semibold text-gray-900">System Healthy</div>
+                <div className="text-xs text-gray-500">All sensors operational</div>
+              </div>
             </div>
+            <button onClick={() => setShowControlsModal(true)} className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition-colors">Controls</button>
           </div>
-          <button onClick={() => setShowControlsModal(true)} className="px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-xs font-semibold hover:bg-emerald-100 transition-colors">Controls</button>
+        </div>
+
+        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
+          <div className="bg-gray-900 aspect-video relative overflow-hidden group cursor-pointer" onClick={() => setShowCameraModal(true)}>
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/40 flex items-center justify-center">
+              <div className="text-center text-white"><Camera className="w-12 h-12 mx-auto mb-2 opacity-60" /><div className="text-sm font-semibold">Live Feed</div></div>
+            </div>
+            <div className="absolute top-3 right-3 bg-red-500 w-3 h-3 rounded-full animate-pulse"></div>
+            <div className="absolute bottom-3 left-3 bg-black/60 px-2.5 py-1.5 rounded text-white text-xs font-mono">{currentTime.toLocaleTimeString()}</div>
+            <button onClick={() => setShowCameraModal(true)} className="absolute bottom-3 right-3 bg-emerald-600 hover:bg-emerald-700 transition-colors p-2 rounded-full"><Maximize2 className="w-4 h-4 text-white" /></button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <SensorCard icon={Thermometer} title="Water Temp" value={sensorData.waterTemp} unit="°C" min={20} max={26} color="bg-emerald-500" />
+          <SensorCard icon={Droplets} title="pH Level" value={sensorData.ph} unit="" min={6.5} max={7.5} color="bg-emerald-500" />
+          <SensorCard icon={Zap} title="Dissolved O₂" value={sensorData.dissolvedO2} unit="mg/L" min={5} max={8} color="bg-cyan-500" />
+          <SensorCard icon={Waves} title="Water Level" value={sensorData.waterLevel} unit="%" min={70} max={100} color="bg-blue-500" />
+        </div>
+
+        <div className="space-y-3">
+          {alerts.map(alert => (
+            <div key={alert.id} className="bg-white rounded-xl p-3 shadow-sm border border-gray-100 cursor-pointer" onClick={() => setExpandedAlert(expandedAlert === alert.id ? null : alert.id)}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {alert.type === "warning" ? <AlertTriangle className="w-5 h-5 text-amber-500" /> : <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                  <span className="font-semibold text-gray-900">{alert.title}</span>
+                </div>
+                <ChevronDown className={`w-5 h-5 transition-transform ${expandedAlert === alert.id ? "rotate-180" : ""}`} />
+              </div>
+              {expandedAlert === alert.id && <div className="mt-2 text-xs text-gray-600">{alert.message}</div>}
+            </div>
+          ))}
         </div>
       </div>
 
-      <BottomNavigation />
       {showControlsModal && <ControlsModal />}
       {showCameraModal && <CameraModal />}
+      <BottomNavigation />
     </div>
   )
 }
