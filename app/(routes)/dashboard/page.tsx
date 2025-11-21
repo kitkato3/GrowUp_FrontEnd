@@ -1,13 +1,15 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Thermometer, Droplets, Activity, Zap, Waves, Gauge, Wind, Fish, ChevronDown, AlertTriangle, CheckCircle, Camera, Maximize2, Bell, X, Clock, Home, BarChart3, Settings } from "lucide-react"
+import { Thermometer, Droplets, Activity, Zap, Waves, Gauge, Wind, Fish, ChevronDown, AlertTriangle, CheckCircle, Camera, Maximize2, Bell, X, Clock, Home, BarChart3, Settings, Sun } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; }
+// --- UPDATED INTERFACES FOR SYNC ---
+// Now includes growLight to match the Settings page and the full state logic.
+interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
 interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
-interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; }
+interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; } // Must match SystemControls
 interface SensorCardProps { icon: React.ElementType; title: string; value: number; unit: string; min: number; max: number; color: string; }
 interface SensorDataState { waterTemp: number; ph: number; dissolvedO2: number; waterLevel: number; waterFlow: number; humidity: number; ammonia: number; lightIntensity: number; }
 interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string; }
@@ -21,20 +23,36 @@ const ALERTS_DATA: AlertData[] = [
 
 const INITIAL_SENSOR_DATA: SensorDataState = { waterTemp: 23.2, ph: 6.8, dissolvedO2: 7.2, waterLevel: 85, waterFlow: 4.5, humidity: 65, ammonia: 0.3, lightIntensity: 15000 }
 
-const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true }
+// --- UPDATED INITIAL STATE FOR SYNC ---
+const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
 const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 } }
+const localStorageKey = 'aquaponics_settings_state';
+const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
 
 const useAquaponicsSettings = () => {
-  const [controls, setControls] = useState<SystemControls>(INITIAL_CONTROLS_FULL)
-  const [activePreset, setActivePreset] = useState<string>("balanced")
-  const [thresholds, setThresholds] = useState<ThresholdState>(INITIAL_THRESHOLDS)
+  const [state, setState] = useState(loadState);
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === localStorageKey && e.newValue) {
+        setState(JSON.parse(e.newValue));
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   const quickSaveControls = (newControls: SystemControls) => {
-    setControls(newControls)
+    setState(prevState => {
+      const newState = { ...prevState, controls: newControls };
+      localStorage.setItem(localStorageKey, JSON.stringify(newState)); // Quick save to sync
+      return newState;
+    });
   }
 
-  return { controls, quickSaveControls, activePreset, thresholds }
+  return { controls: state.controls, quickSaveControls, activePreset: state.activePreset, thresholds: state.thresholds }
 }
+
 
 type ThresholdStatus = "good" | "warning" | "critical"
 const getThresholdStatus = (value: number, min: number, max: number): ThresholdStatus => {
@@ -128,11 +146,13 @@ export default function Dashboard() {
   const [expandedAlert, setExpandedAlert] = useState<number | null>(null)
   const [showControlsModal, setShowControlsModal] = useState<boolean>(false)
   const [showCameraModal, setShowCameraModal] = useState<boolean>(false)
+  // Now using the full SystemControls/ControlState interface
   const [localControls, setLocalControls] = useState<ControlState>({ ...controls })
   const [sensorData, setSensorData] = useState<SensorDataState>(INITIAL_SENSOR_DATA)
   const alerts = ALERTS_DATA
 
   useEffect(() => {
+    // Ensure localControls has the latest controls, including growLight
     if (showControlsModal) setLocalControls({ ...controls })
   }, [showControlsModal, controls])
 
@@ -151,6 +171,7 @@ export default function Dashboard() {
   }, [])
 
   const handleQuickControlsSave = () => {
+    // Save the full localControls state, which now includes growLight
     quickSaveControls({ ...localControls })
     setShowControlsModal(false)
   }
@@ -169,6 +190,8 @@ export default function Dashboard() {
             <ControlToggle label="DC Fan" icon={Wind} active={localControls.fan} onChange={val => handleLocalControlChange('fan', val)} />
             <ControlToggle label="pH Adjustment" icon={Droplets} active={localControls.phAdjustment} onChange={val => handleLocalControlChange('phAdjustment', val)} />
             <ControlToggle label="Aerator" icon={Activity} active={localControls.aerator} onChange={val => handleLocalControlChange('aerator', val)} />
+            {/* Add Grow Light here to enable quick access, since it's now in the state */}
+            <ControlToggle label="Grow Light" icon={Sun} active={localControls.growLight} onChange={val => handleLocalControlChange('growLight', val)} />
           </div>
           <button onClick={handleQuickControlsSave} className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">Done</button>
         </div>

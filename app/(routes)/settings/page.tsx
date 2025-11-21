@@ -23,10 +23,8 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-// --- TYPE & HOOK IMPORTS (Simulated Import from the Shared Hook file) ---
-// Note: In a real project, you would import these from './useAquaponicsSettings'
-// For this full code response, I'm defining the necessary types and hook logic locally for completeness.
-
+// --- TYPE & HOOK IMPORTS (Simulated Import) ---
+// Unified SystemControls now includes 'growLight'
 interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
 interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
 
@@ -35,12 +33,32 @@ interface PresetCardProps { title: string; description: string; icon: React.Elem
 interface ThresholdRangeInputProps { label: string; unit: string; icon: React.ElementType; minValue: number; maxValue: number; minLimit: number; maxLimit: number; onMinChange: (val: number) => void; onMaxChange: (val: number) => void; }
 
 
-// --- Custom Hook Logic (Copied from the shared file for self-contained code) ---
+// --- Custom Hook Logic (Unified with localStorage for sync) ---
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true, }
 const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 }, }
 const localStorageKey = 'aquaponics_settings_state';
-const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
-const saveState = (state: { controls: SystemControls, activePreset: string, thresholds: ThresholdState }) => { try { localStorage.setItem(localStorageKey, JSON.stringify(state)); } catch (error) { console.error('Error saving state:', error); } };
+const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => {
+  try {
+    const savedState = localStorage.getItem(localStorageKey);
+    if (savedState) {
+      return {
+        ...INITIAL_CONTROLS_FULL, // Ensure all keys exist on load
+        ...JSON.parse(savedState)
+      };
+    }
+  } catch (error) {
+    console.error('Error loading state:', error);
+  }
+  return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, };
+};
+
+const saveState = (state: { controls: SystemControls, activePreset: string, thresholds: ThresholdState }) => {
+  try {
+    localStorage.setItem(localStorageKey, JSON.stringify(state));
+  } catch (error) {
+    console.error('Error saving state:', error);
+  }
+};
 
 const useAquaponicsSettings = () => {
   const [state, setState] = useState(loadState);
@@ -50,18 +68,18 @@ const useAquaponicsSettings = () => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === localStorageKey && e.newValue) {
         const newState = JSON.parse(e.newValue);
+        // Only update state if it's different from current state (to avoid loop on save)
         setState(newState);
+        setHasChanges(false); // Changes were just synced from another window/tab
       }
     };
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
+  // --- Unified Setter Functions (Sets changes flag) ---
   const setControls = (newControls: SystemControls) => {
-    setState(prevState => {
-      const newState = { ...prevState, controls: newControls };
-      return newState;
-    });
+    setState(prevState => ({ ...prevState, controls: newControls }));
     setHasChanges(true);
   };
 
@@ -74,6 +92,7 @@ const useAquaponicsSettings = () => {
     setState(prevState => ({ ...prevState, thresholds: newThresholds }));
     setHasChanges(true);
   };
+  // ---------------------------------------------------
 
   const handleSave = () => {
     saveState(state);
@@ -91,7 +110,7 @@ const useAquaponicsSettings = () => {
     setThresholds,
     handleSave,
     hasChanges,
-    setHasChanges,
+    setHasChanges, // Exported to be cleared manually if needed, but setters handle setting to true
   };
 };
 // --- END Custom Hook Logic ---
@@ -251,7 +270,6 @@ export default function SettingsPage() {
     setThresholds,
     handleSave,
     hasChanges,
-    setHasChanges,
   } = useAquaponicsSettings();
 
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -262,13 +280,13 @@ export default function SettingsPage() {
   }, [])
 
   const handleControlChange = (key: keyof SystemControls, val: boolean) => {
+    // Using setControls from the hook, which sets hasChanges to true
     setControls({ ...controls, [key]: val })
-    setHasChanges(true)
   }
 
   const handlePresetChange = (preset: string) => {
     setPreset(preset)
-    setHasChanges(true)
+    // Update controls based on preset
     let newControls: SystemControls
     switch (preset) {
       case "balanced":
@@ -286,7 +304,7 @@ export default function SettingsPage() {
       default:
         newControls = controls;
     }
-    setControls(newControls);
+    setControls(newControls); // Use setControls to also mark changes
   }
 
   const handleSaveChanges = () => {
@@ -295,6 +313,16 @@ export default function SettingsPage() {
     } else {
       alert('Failed to save settings. Please try again.');
     }
+  }
+
+  const handleThresholdChange = (key: keyof ThresholdState, type: 'min' | 'max', val: number) => {
+    setThresholds({
+      ...thresholds,
+      [key]: {
+        ...thresholds[key],
+        [type]: val,
+      },
+    });
   }
 
   return (
@@ -346,12 +374,8 @@ export default function SettingsPage() {
                 maxValue={thresholds.waterTemp.max}
                 minLimit={18}
                 maxLimit={30}
-                onMinChange={(val) => {
-                  setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, min: val } })
-                }}
-                onMaxChange={(val) => {
-                  setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, max: val } })
-                }}
+                onMinChange={(val) => handleThresholdChange('waterTemp', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('waterTemp', 'max', val)}
               />
               <ThresholdRangeInput
                 label="pH Level"
@@ -361,12 +385,8 @@ export default function SettingsPage() {
                 maxValue={thresholds.ph.max}
                 minLimit={5}
                 maxLimit={9}
-                onMinChange={(val) => {
-                  setThresholds({ ...thresholds, ph: { ...thresholds.ph, min: val } })
-                }}
-                onMaxChange={(val) => {
-                  setThresholds({ ...thresholds, ph: { ...thresholds.ph, max: val } })
-                }}
+                onMinChange={(val) => handleThresholdChange('ph', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('ph', 'max', val)}
               />
               <ThresholdRangeInput
                 label="Dissolved Oxygen"
@@ -376,12 +396,8 @@ export default function SettingsPage() {
                 maxValue={thresholds.dissolvedO2.max}
                 minLimit={3}
                 maxLimit={10}
-                onMinChange={(val) => {
-                  setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, min: val } })
-                }}
-                onMaxChange={(val) => {
-                  setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, max: val } })
-                }}
+                onMinChange={(val) => handleThresholdChange('dissolvedO2', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('dissolvedO2', 'max', val)}
               />
               <ThresholdRangeInput
                 label="Ammonia Level"
@@ -391,12 +407,8 @@ export default function SettingsPage() {
                 maxValue={thresholds.ammonia.max}
                 minLimit={0}
                 maxLimit={2}
-                onMinChange={(val) => {
-                  setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, min: val } })
-                }}
-                onMaxChange={(val) => {
-                  setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, max: val } })
-                }}
+                onMinChange={(val) => handleThresholdChange('ammonia', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('ammonia', 'max', val)}
               />
             </div>
           </div>
