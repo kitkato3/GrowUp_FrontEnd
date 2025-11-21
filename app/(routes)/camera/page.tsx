@@ -404,8 +404,8 @@ export default function App() {
 
             {/* Gallery Modal */}
             {showGallery && !selectedSnapshot && (
-                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
+                    <div className="max-w-md w-full h-full max-h-[95vh] flex flex-col">
                         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-2xl">
                             <div><h2 className="text-xl font-bold text-gray-900">Snapshot Gallery</h2><p className="text-sm text-gray-500">Automatic 8:00 AM captures</p></div>
                             <button onClick={() => setShowGallery(false)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full"><X className="w-6 h-6" /></button>
