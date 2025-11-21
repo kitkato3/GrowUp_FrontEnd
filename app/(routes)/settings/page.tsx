@@ -13,11 +13,9 @@ import {
   AlertTriangle,
   Home,
   Camera,
-  Settings as SettingsIcon,
+  Settings,
   BarChart3,
 } from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 
 // --- TYPE DEFINITIONS ---
 interface SystemControls {
@@ -77,12 +75,12 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
 )
 
 const BottomNavigation = () => {
-  const pathname = usePathname()
+  const [pathname, setPathname] = useState("/settings")
   const tabs = [
     { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
     { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
     { id: "camera", label: "Camera", href: "/camera", icon: Camera },
-    { id: "settings", label: "Settings", href: "/settings", icon: SettingsIcon },
+    { id: "settings", label: "Settings", href: "/settings", icon: Settings },
   ]
 
   return (
@@ -92,15 +90,15 @@ const BottomNavigation = () => {
           const isActive = pathname.startsWith(tab.href)
           const Icon = tab.icon
           return (
-            <Link
+            <button
               key={tab.id}
-              href={tab.href}
+              onClick={() => setPathname(tab.href)}
               className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"
                 }`}
             >
               <Icon className="w-5 h-5 mb-1" />
               <span className="text-xs font-semibold">{tab.label}</span>
-            </Link>
+            </button>
           )
         })}
       </div>
@@ -204,7 +202,7 @@ const ThresholdRangeInput: React.FC<ThresholdRangeInputProps> = ({
 )
 
 // --- MAIN COMPONENT ---
-export default function Settings() {
+export default function SettingsPage() {
   const [controls, setControls] = useState<SystemControls>(INITIAL_CONTROLS)
   const [activePreset, setActivePreset] = useState<string>("balanced")
   const [thresholds, setThresholds] = useState({
@@ -214,6 +212,22 @@ export default function Settings() {
     ammonia: { min: 0, max: 0.5 },
   })
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [hasChanges, setHasChanges] = useState(false)
+
+  // Load saved settings on mount
+  useEffect(() => {
+    try {
+      const savedControls = localStorage.getItem('aquaponics_controls')
+      const savedPreset = localStorage.getItem('aquaponics_preset')
+      const savedThresholds = localStorage.getItem('aquaponics_thresholds')
+
+      if (savedControls) setControls(JSON.parse(savedControls))
+      if (savedPreset) setActivePreset(savedPreset)
+      if (savedThresholds) setThresholds(JSON.parse(savedThresholds))
+    } catch (error) {
+      console.error('Error loading settings:', error)
+    }
+  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -222,10 +236,12 @@ export default function Settings() {
 
   const handleControlChange = (key: keyof SystemControls, val: boolean) => {
     setControls({ ...controls, [key]: val })
+    setHasChanges(true)
   }
 
   const handlePresetChange = (preset: string) => {
     setActivePreset(preset)
+    setHasChanges(true)
     switch (preset) {
       case "balanced":
         setControls({ pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true })
@@ -239,6 +255,20 @@ export default function Settings() {
       case "maintenance":
         setControls({ pump: false, fan: true, phAdjustment: false, aerator: false, growLight: false })
         break
+    }
+  }
+
+  const handleSaveChanges = () => {
+    try {
+      localStorage.setItem('aquaponics_controls', JSON.stringify(controls))
+      localStorage.setItem('aquaponics_preset', activePreset)
+      localStorage.setItem('aquaponics_thresholds', JSON.stringify(thresholds))
+      setHasChanges(false)
+
+      alert('Settings saved successfully!')
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      alert('Failed to save settings. Please try again.')
     }
   }
 
@@ -291,8 +321,14 @@ export default function Settings() {
                 maxValue={thresholds.waterTemp.max}
                 minLimit={18}
                 maxLimit={30}
-                onMinChange={(val) => setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, min: val } })}
-                onMaxChange={(val) => setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, max: val } })}
+                onMinChange={(val) => {
+                  setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, min: val } })
+                  setHasChanges(true)
+                }}
+                onMaxChange={(val) => {
+                  setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, max: val } })
+                  setHasChanges(true)
+                }}
               />
               <ThresholdRangeInput
                 label="pH Level"
@@ -302,8 +338,14 @@ export default function Settings() {
                 maxValue={thresholds.ph.max}
                 minLimit={5}
                 maxLimit={9}
-                onMinChange={(val) => setThresholds({ ...thresholds, ph: { ...thresholds.ph, min: val } })}
-                onMaxChange={(val) => setThresholds({ ...thresholds, ph: { ...thresholds.ph, max: val } })}
+                onMinChange={(val) => {
+                  setThresholds({ ...thresholds, ph: { ...thresholds.ph, min: val } })
+                  setHasChanges(true)
+                }}
+                onMaxChange={(val) => {
+                  setThresholds({ ...thresholds, ph: { ...thresholds.ph, max: val } })
+                  setHasChanges(true)
+                }}
               />
               <ThresholdRangeInput
                 label="Dissolved Oxygen"
@@ -313,8 +355,14 @@ export default function Settings() {
                 maxValue={thresholds.dissolvedO2.max}
                 minLimit={3}
                 maxLimit={10}
-                onMinChange={(val) => setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, min: val } })}
-                onMaxChange={(val) => setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, max: val } })}
+                onMinChange={(val) => {
+                  setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, min: val } })
+                  setHasChanges(true)
+                }}
+                onMaxChange={(val) => {
+                  setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, max: val } })
+                  setHasChanges(true)
+                }}
               />
               <ThresholdRangeInput
                 label="Ammonia Level"
@@ -324,8 +372,14 @@ export default function Settings() {
                 maxValue={thresholds.ammonia.max}
                 minLimit={0}
                 maxLimit={2}
-                onMinChange={(val) => setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, min: val } })}
-                onMaxChange={(val) => setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, max: val } })}
+                onMinChange={(val) => {
+                  setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, min: val } })
+                  setHasChanges(true)
+                }}
+                onMaxChange={(val) => {
+                  setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, max: val } })
+                  setHasChanges(true)
+                }}
               />
             </div>
           </div>
@@ -354,8 +408,15 @@ export default function Settings() {
           </div>
 
           {/* Save Changes Button */}
-          <button className="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all">
-            Save All Changes
+          <button
+            onClick={handleSaveChanges}
+            disabled={!hasChanges}
+            className={`w-full py-4 font-bold rounded-xl shadow-lg transition-all ${hasChanges
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-xl'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+          >
+            {hasChanges ? 'Save All Changes' : 'No Changes to Save'}
           </button>
         </div>
       </div>
