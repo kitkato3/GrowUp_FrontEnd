@@ -113,15 +113,15 @@ const useAquaponicsSettings = () => {
 
 
 // =================================================================
-// 🧩 Components (Refined for better UI/UX)
+// 🧩 Components (Retained from base code with minor adjustments)
 // =================================================================
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
-  <div className="bg-white px-4 py-3 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40 shadow-sm">
-    <span className="font-extrabold text-lg text-emerald-600">GROWUP</span>
+  <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
+    <span className="font-bold text-gray-900">GROWUP</span>
     <div className="flex items-center gap-2">
-      <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
-      <span className="text-xs text-gray-600 font-medium">{time}</span>
+      <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+      <span className="text-xs text-gray-600">{time}</span>
     </div>
   </div>
 )
@@ -136,8 +136,8 @@ const BottomNavigation = () => {
   ]
 
   return (
-    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-2xl z-50">
-      <div className="flex items-center justify-around py-2.5">
+    <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
+      <div className="flex items-center justify-around py-3">
         {tabs.map((tab) => {
           const isActive = pathname.startsWith(tab.href)
           const Icon = tab.icon
@@ -145,11 +145,11 @@ const BottomNavigation = () => {
             <Link
               key={tab.id}
               href={tab.href}
-              className={`flex flex-col items-center py-2 px-4 rounded-xl transition-all ${isActive ? "text-emerald-600" : "text-gray-500 hover:text-gray-700"
+              className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"
                 }`}
             >
-              <Icon className={`w-6 h-6 ${isActive ? 'fill-emerald-100' : ''}`} />
-              <span className="text-xs font-medium mt-1">{tab.label}</span>
+              <Icon className="w-5 h-5 mb-1" />
+              <span className="text-xs font-semibold">{tab.label}</span>
             </Link>
           )
         })}
@@ -159,24 +159,21 @@ const BottomNavigation = () => {
 }
 
 const ControlToggle: React.FC<ControlToggleProps> = ({ label, description, icon: Icon, active, onChange }) => (
-  <div className="flex items-center justify-between p-3.5 bg-white rounded-xl shadow-sm border border-gray-100 transition-shadow duration-200 hover:shadow-md">
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
     <div className="flex items-center gap-3 flex-1">
-      <div className={`p-2 rounded-xl flex-shrink-0 ${active ? 'bg-emerald-500' : 'bg-gray-200'}`}>
-        <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-gray-500'}`} />
+      <div className={`p-2 rounded-lg ${active ? 'bg-emerald-100' : 'bg-gray-200'}`}>
+        <Icon className={`w-5 h-5 ${active ? 'text-emerald-600' : 'text-gray-400'}`} />
       </div>
       <div className="flex-1">
-        <div className="font-semibold text-gray-900">{label}</div>
-        <div className="text-xs text-gray-500 mt-0.5">{description}</div>
+        <div className="font-medium text-gray-900">{label}</div>
+        <div className="text-xs text-gray-500">{description}</div>
       </div>
     </div>
-    {/* Custom Toggle Switch */}
     <button
       onClick={() => onChange(!active)}
-      className={`w-11 h-6 rounded-full transition-colors flex-shrink-0 relative ${active ? 'bg-emerald-500' : 'bg-gray-300'}`}
-      aria-checked={active}
-      role="switch"
+      className={`w-12 h-6 rounded-full transition-colors flex-shrink-0 ${active ? 'bg-emerald-500' : 'bg-gray-300'}`}
     >
-      <div className={`absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-300 shadow-md ${active ? 'translate-x-5 bg-white' : 'translate-x-0'}`} />
+      <div className={`w-5 h-5 bg-white rounded-full transition-transform ${active ? 'translate-x-6' : 'translate-x-0.5'}`} />
     </button>
   </div>
 )
@@ -184,18 +181,18 @@ const ControlToggle: React.FC<ControlToggleProps> = ({ label, description, icon:
 const PresetCard: React.FC<PresetCardProps> = ({ title, description, icon: Icon, active, onActivate }) => (
   <button
     onClick={onActivate}
-    className={`w-full p-4 rounded-xl border-2 transition-all text-left shadow-sm ${active ? 'border-emerald-500 bg-emerald-50 shadow-lg' : 'border-gray-200 bg-white hover:border-emerald-300'
+    className={`w-full p-4 rounded-xl border-2 transition-all text-left ${active ? 'border-emerald-500 bg-emerald-50 shadow-sm' : 'border-gray-200 bg-white hover:border-gray-300'
       }`}
   >
-    <div className="flex items-start gap-3">
-      <div className={`p-2 rounded-lg flex-shrink-0 ${active ? 'bg-emerald-500' : 'bg-gray-100'}`}>
-        <Icon className={`w-5 h-5 ${active ? 'text-white' : 'text-gray-600'}`} />
+    <div className="flex flex-col items-center justify-center gap-2 h-full text-center">
+      <div className={`p-2 rounded-lg flex-shrink-0 ${active ? 'bg-emerald-100' : 'bg-gray-100'}`}>
+        <Icon className={`w-6 h-6 ${active ? 'text-emerald-600' : 'text-gray-600'}`} />
       </div>
       <div className="flex-1">
-        <div className="font-semibold text-gray-900">{title}</div>
-        <div className="text-xs text-gray-600 mt-1">{description}</div>
+        <div className="font-semibold text-sm text-gray-900">{title}</div>
+        <div className="text-[10px] text-gray-500 mt-1">{description}</div>
       </div>
-      {active && <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-1" />}
+      {active && <CheckCircle className="w-4 h-4 text-emerald-500 absolute top-2 right-2" />}
     </div>
   </button>
 )
@@ -211,77 +208,51 @@ const ThresholdRangeInput: React.FC<ThresholdRangeInputProps> = ({
   onMinChange,
   onMaxChange
 }) => (
-  <div className="p-4 bg-white rounded-xl shadow-sm border border-gray-100">
-    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-      <div className="p-1 rounded-md bg-amber-100">
-        <Icon className="w-4 h-4 text-amber-600" />
-      </div>
-      <span className="font-semibold text-gray-900 text-base">{label}</span>
+  <div className="p-4 bg-gray-50 rounded-xl">
+    <div className="flex items-center gap-2 mb-3">
+      <Icon className="w-4 h-4 text-gray-600" />
+      <span className="font-medium text-gray-900 text-sm">{label}</span>
+      <span className="text-xs text-gray-400">({unit})</span>
     </div>
 
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label htmlFor={`${label}-min`} className="text-xs font-medium text-gray-600 block mb-1">Minimum Alert</label>
-        <div className="relative">
-          <input
-            id={`${label}-min`}
-            type="number"
-            value={minValue}
-            onChange={(e) => onMinChange(Number(e.target.value))}
-            min={minLimit}
-            max={maxLimit}
-            step="0.1"
-            className="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
-          />
-          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 font-medium">{unit}</span>
-        </div>
+    <div className="flex items-center gap-3">
+      <div className="flex-1">
+        <span className="text-xs text-gray-500">Min Alert</span>
+        <input
+          type="number"
+          value={minValue}
+          onChange={(e) => onMinChange(Number(e.target.value))}
+          min={minLimit}
+          max={maxLimit}
+          step="0.1"
+          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
       </div>
 
-      <div>
-        <label htmlFor={`${label}-max`} className="text-xs font-medium text-gray-600 block mb-1">Maximum Alert</label>
-        <div className="relative">
-          <input
-            id={`${label}-max`}
-            type="number"
-            value={maxValue}
-            onChange={(e) => onMaxChange(Number(e.target.value))}
-            min={minLimit}
-            max={maxLimit}
-            step="0.1"
-            className="w-full px-3 py-2 pr-12 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-amber-500 transition"
-          />
-          <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs text-gray-500 font-medium">{unit}</span>
-        </div>
+      <span className="text-gray-400 font-medium mt-5">—</span>
+
+      <div className="flex-1">
+        <span className="text-xs text-gray-500">Max Alert</span>
+        <input
+          type="number"
+          value={maxValue}
+          onChange={(e) => onMaxChange(Number(e.target.value))}
+          min={minLimit}
+          max={maxLimit}
+          step="0.1"
+          className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        />
       </div>
     </div>
 
-    <div className="flex justify-between text-xs text-gray-400 mt-4 pt-3 border-t border-gray-50/50">
+    <div className="flex justify-between text-xs text-gray-500 mt-3 border-t border-gray-200 pt-2">
       <span>System Limits: {minLimit} to {maxLimit}</span>
     </div>
   </div>
 )
 
-const SystemInfoSection: React.FC = () => (
-  <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-    <h3 className="font-bold text-gray-900 mb-4 border-b border-gray-100 pb-2">System Information</h3>
-    <div className="space-y-3 text-sm">
-      {([
-        { label: "Firmware Version", value: "v2.1.3" },
-        { label: "Last Update", value: "2 days ago" },
-        { label: "System Uptime", value: "7d 14h 32m" },
-        { label: "Storage Used", value: "2.1GB / 32GB" }
-      ]).map((item, index) => (
-        <div key={index} className={`flex justify-between ${index < 3 ? 'pb-3 border-b border-gray-100' : ''}`}>
-          <span className="text-gray-600">{item.label}</span>
-          <span className="font-semibold text-gray-900">{item.value}</span>
-        </div>
-      ))}
-    </div>
-  </div>
-);
-
 // =================================================================
-// ⚙️ MAIN SETTINGS COMPONENT (Simplified Render)
+// ⚙️ MAIN SETTINGS COMPONENT (Updated Layout)
 // =================================================================
 export default function SettingsPage() {
   const {
@@ -352,117 +323,124 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
       <Navbar time={currentTime.toLocaleTimeString()} />
 
-      <div className="px-4 py-5 pb-24 space-y-8">
-
-        {/* Header */}
-        <div className="mb-4">
-          <h1 className="text-3xl font-extrabold text-gray-900">System Configuration ⚙️</h1>
-          <p className="text-gray-500 mt-1">Adjust controls, thresholds, and presets for optimal performance.</p>
+      <div className="px-4 py-5 pb-24">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <p className="text-gray-600 mt-1">Configure your aquaponics system</p>
         </div>
 
-        {/* Automation Presets */}
-        <section>
-          <h2 className="font-bold text-xl text-gray-800 mb-4 flex items-center gap-2">
-            <Zap className="w-5 h-5 text-emerald-500" />
-            Automation Presets
-          </h2>
-          <div className="space-y-3">
-            <PresetCard title="Balanced Mode" description="Optimal settings for standard growth" icon={Activity} active={activePreset === "balanced"} onActivate={() => handlePresetChange("balanced")} />
-            <PresetCard title="High Growth Mode" description="Maximum growth with increased resource use" icon={Zap} active={activePreset === "highGrowth"} onActivate={() => handlePresetChange("highGrowth")} />
-            <PresetCard title="Eco Mode" description="Energy saving mode with reduced power" icon={Sun} active={activePreset === "ecoMode"} onActivate={() => handlePresetChange("ecoMode")} />
-            <PresetCard title="Maintenance Mode" description="Safe mode for system maintenance" icon={AlertTriangle} active={activePreset === "maintenance"} onActivate={() => handlePresetChange("maintenance")} />
+        <div className="space-y-5">
+
+          {/* 1. Automation Presets (Now first, 2x2 grid) */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 mb-4">Automation Presets</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <PresetCard title="Balanced Mode" description="Optimal standard settings" icon={Activity} active={activePreset === "balanced"} onActivate={() => handlePresetChange("balanced")} />
+              <PresetCard title="High Growth Mode" description="Max resources for fast growth" icon={Zap} active={activePreset === "highGrowth"} onActivate={() => handlePresetChange("highGrowth")} />
+              <PresetCard title="Eco Mode" description="Energy saving & reduced power" icon={Sun} active={activePreset === "ecoMode"} onActivate={() => handlePresetChange("ecoMode")} />
+              <PresetCard title="Maintenance Mode" description="System shutdown for servicing" icon={AlertTriangle} active={activePreset === "maintenance"} onActivate={() => handlePresetChange("maintenance")} />
+            </div>
           </div>
-        </section>
 
-        ---
-
-        {/* Control Panel */}
-        <section>
-          <h2 className="font-bold text-xl text-gray-800 mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-emerald-500" />
-            Manual System Controls
-          </h2>
-          <div className="space-y-3">
-            <ControlToggle label="Submersible Pump" description="Main water circulation" icon={Waves} active={controls.pump} onChange={(val) => handleControlChange('pump', val)} />
-            <ControlToggle label="Aerator" description="Oxygen circulation" icon={Activity} active={controls.aerator} onChange={(val) => handleControlChange('aerator', val)} />
-            <ControlToggle label="pH Adjustment" description="Automatic pH balancing" icon={Droplets} active={controls.phAdjustment} onChange={(val) => handleControlChange('phAdjustment', val)} />
-            <ControlToggle label="Grow Light" description="LED lighting system" icon={Sun} active={controls.growLight} onChange={(val) => handleControlChange('growLight', val)} />
-            <ControlToggle label="DC Fan" description="Air circulation & cooling" icon={Wind} active={controls.fan} onChange={(val) => handleControlChange('fan', val)} />
+          {/* 2. Control Panel (Now second) */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 mb-4">System Controls</h3>
+            <div className="space-y-3">
+              <ControlToggle label="Submersible Pump" description="Main water circulation" icon={Waves} active={controls.pump} onChange={(val) => handleControlChange('pump', val)} />
+              <ControlToggle label="DC Fan" description="Air circulation & cooling" icon={Wind} active={controls.fan} onChange={(val) => handleControlChange('fan', val)} />
+              <ControlToggle label="pH Adjustment" description="Automatic pH balancing" icon={Droplets} active={controls.phAdjustment} onChange={(val) => handleControlChange('phAdjustment', val)} />
+              <ControlToggle label="Aerator" description="Oxygen circulation" icon={Activity} active={controls.aerator} onChange={(val) => handleControlChange('aerator', val)} />
+              <ControlToggle label="Grow Light" description="LED lighting system" icon={Sun} active={controls.growLight} onChange={(val) => handleControlChange('growLight', val)} />
+            </div>
           </div>
-        </section>
 
-        ---
-
-        {/* Alert Thresholds */}
-        <section>
-          <h2 className="font-bold text-xl text-gray-800 mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-amber-500" />
-            Custom Alert Thresholds
-          </h2>
-          <div className="space-y-4">
-            <ThresholdRangeInput
-              label="Water Temperature"
-              unit="°C"
-              icon={Thermometer}
-              minValue={thresholds.waterTemp.min}
-              maxValue={thresholds.waterTemp.max}
-              minLimit={18}
-              maxLimit={30}
-              onMinChange={(val) => handleThresholdChange('waterTemp', 'min', val)}
-              onMaxChange={(val) => handleThresholdChange('waterTemp', 'max', val)}
-            />
-            <ThresholdRangeInput
-              label="pH Level"
-              unit=""
-              icon={Droplets}
-              minValue={thresholds.ph.min}
-              maxValue={thresholds.ph.max}
-              minLimit={5}
-              maxLimit={9}
-              onMinChange={(val) => handleThresholdChange('ph', 'min', val)}
-              onMaxChange={(val) => handleThresholdChange('ph', 'max', val)}
-            />
-            <ThresholdRangeInput
-              label="Dissolved Oxygen"
-              unit="mg/L"
-              icon={Activity}
-              minValue={thresholds.dissolvedO2.min}
-              maxValue={thresholds.dissolvedO2.max}
-              minLimit={3}
-              maxLimit={10}
-              onMinChange={(val) => handleThresholdChange('dissolvedO2', 'min', val)}
-              onMaxChange={(val) => handleThresholdChange('dissolvedO2', 'max', val)}
-            />
-            <ThresholdRangeInput
-              label="Ammonia Level"
-              unit="ppm"
-              icon={AlertTriangle}
-              minValue={thresholds.ammonia.min}
-              maxValue={thresholds.ammonia.max}
-              minLimit={0}
-              maxLimit={2}
-              onMinChange={(val) => handleThresholdChange('ammonia', 'min', val)}
-              onMaxChange={(val) => handleThresholdChange('ammonia', 'max', val)}
-            />
+          {/* Alert Thresholds (Position unchanged) */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <div className="flex items-center gap-2 mb-4">
+              <Bell className="w-5 h-5 text-amber-500" />
+              <h3 className="font-bold text-gray-900">Alert Thresholds</h3>
+            </div>
+            <div className="space-y-3">
+              <ThresholdRangeInput
+                label="Water Temperature"
+                unit="°C"
+                icon={Thermometer}
+                minValue={thresholds.waterTemp.min}
+                maxValue={thresholds.waterTemp.max}
+                minLimit={18}
+                maxLimit={30}
+                onMinChange={(val) => handleThresholdChange('waterTemp', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('waterTemp', 'max', val)}
+              />
+              <ThresholdRangeInput
+                label="pH Level"
+                unit=""
+                icon={Droplets}
+                minValue={thresholds.ph.min}
+                maxValue={thresholds.ph.max}
+                minLimit={5}
+                maxLimit={9}
+                onMinChange={(val) => handleThresholdChange('ph', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('ph', 'max', val)}
+              />
+              <ThresholdRangeInput
+                label="Dissolved Oxygen"
+                unit="mg/L"
+                icon={Activity}
+                minValue={thresholds.dissolvedO2.min}
+                maxValue={thresholds.dissolvedO2.max}
+                minLimit={3}
+                maxLimit={10}
+                onMinChange={(val) => handleThresholdChange('dissolvedO2', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('dissolvedO2', 'max', val)}
+              />
+              <ThresholdRangeInput
+                label="Ammonia Level"
+                unit="ppm"
+                icon={AlertTriangle}
+                minValue={thresholds.ammonia.min}
+                maxValue={thresholds.ammonia.max}
+                minLimit={0}
+                maxLimit={2}
+                onMinChange={(val) => handleThresholdChange('ammonia', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('ammonia', 'max', val)}
+              />
+            </div>
           </div>
-        </section>
 
-        ---
+          {/* System Info (Position unchanged) */}
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+            <h3 className="font-bold text-gray-900 mb-4">System Information</h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between pb-3 border-b border-gray-100">
+                <span className="text-gray-600">Firmware Version</span>
+                <span className="font-semibold text-gray-900">v2.1.3</span>
+              </div>
+              <div className="flex justify-between pb-3 border-b border-gray-100">
+                <span className="text-gray-600">Last Update</span>
+                <span className="font-semibold text-gray-900">2 days ago</span>
+              </div>
+              <div className="flex justify-between pb-3 border-b border-gray-100">
+                <span className="text-gray-600">System Uptime</span>
+                <span className="font-semibold text-gray-900">7d 14h 32m</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Storage Used</span>
+                <span className="font-semibold text-gray-900">2.1GB / 32GB</span>
+              </div>
+            </div>
+          </div>
 
-        {/* System Info */}
-        <SystemInfoSection />
-
-        {/* Save Changes Button */}
-        <div className="fixed bottom-16 left-1/2 transform -translate-x-1/2 w-full max-w-md px-4 z-50">
+          {/* Save Changes Button */}
           <button
             onClick={handleSaveChanges}
             disabled={!hasChanges}
-            className={`w-full py-3 font-extrabold text-lg rounded-xl shadow-2xl transition-all duration-300 ${hasChanges
-              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+            className={`w-full py-4 font-bold rounded-xl shadow-lg transition-all ${hasChanges
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-xl'
               : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
-            {hasChanges ? '💾 Save All Changes' : 'No Changes to Save'}
+            {hasChanges ? 'Save All Changes' : 'No Changes to Save'}
           </button>
         </div>
       </div>
