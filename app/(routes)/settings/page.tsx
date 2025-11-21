@@ -320,81 +320,104 @@ export default function Settings() {
               <Bell className="w-5 h-5 text-amber-500" />
               <h3 className="font-bold text-gray-900">Alert Thresholds</h3>
             </div>
+
             <div className="space-y-3">
-              <ThresholdInput
-                label="Water Temperature"
-                value={thresholds.waterTemp.min}
-                unit="°C (min)"
-                icon={Thermometer}
-                min={18}
-                max={30}
-                onChange={(val) => setThresholds({
-                  ...thresholds,
-                  waterTemp: { ...thresholds.waterTemp, min: val }
-                })}
-              />
-              <ThresholdInput
-                label="Water Temperature"
-                value={thresholds.waterTemp.max}
-                unit="°C (max)"
-                icon={Thermometer}
-                min={18}
-                max={30}
-                onChange={(val) => setThresholds({
-                  ...thresholds,
-                  waterTemp: { ...thresholds.waterTemp, max: val }
-                })}
-              />
-              <ThresholdInput
-                label="pH Level"
-                value={thresholds.ph.min}
-                unit="(min)"
-                icon={Droplets}
-                min={5}
-                max={9}
-                onChange={(val) => setThresholds({
-                  ...thresholds,
-                  ph: { ...thresholds.ph, min: val }
-                })}
-              />
-              <ThresholdInput
-                label="pH Level"
-                value={thresholds.ph.max}
-                unit="(max)"
-                icon={Droplets}
-                min={5}
-                max={9}
-                onChange={(val) => setThresholds({
-                  ...thresholds,
-                  ph: { ...thresholds.ph, max: val }
-                })}
-              />
-              <ThresholdInput
-                label="Dissolved Oxygen"
-                value={thresholds.dissolvedO2.min}
-                unit="mg/L (min)"
-                icon={Activity}
-                min={3}
-                max={10}
-                onChange={(val) => setThresholds({
-                  ...thresholds,
-                  dissolvedO2: { ...thresholds.dissolvedO2, min: val }
-                })}
-              />
-              <ThresholdInput
-                label="Ammonia Level"
-                value={thresholds.ammonia.max}
-                unit="ppm (max)"
-                icon={AlertTriangle}
-                min={0}
-                max={2}
-                onChange={(val) => setThresholds({
-                  ...thresholds,
-                  ammonia: { ...thresholds.ammonia, max: val }
-                })}
-              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <ThresholdInput
+                  label="Water Temp (Min)"
+                  value={thresholds.waterTemp.min}
+                  unit="°C"
+                  icon={Thermometer}
+                  min={18}
+                  max={30}
+                  onChange={(val) =>
+                    setThresholds({
+                      ...thresholds,
+                      waterTemp: { ...thresholds.waterTemp, min: val }
+                    })
+                  }
+                />
+                <ThresholdInput
+                  label="Water Temp (Max)"
+                  value={thresholds.waterTemp.max}
+                  unit="°C"
+                  icon={Thermometer}
+                  min={18}
+                  max={30}
+                  onChange={(val) =>
+                    setThresholds({
+                      ...thresholds,
+                      waterTemp: { ...thresholds.waterTemp, max: val }
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <ThresholdInput
+                  label="pH Level (Min)"
+                  value={thresholds.ph.min}
+                  unit=""
+                  icon={Droplets}
+                  min={5}
+                  max={9}
+                  onChange={(val) =>
+                    setThresholds({
+                      ...thresholds,
+                      ph: { ...thresholds.ph, min: val }
+                    })
+                  }
+                />
+                <ThresholdInput
+                  label="pH Level (Max)"
+                  value={thresholds.ph.max}
+                  unit=""
+                  icon={Droplets}
+                  min={5}
+                  max={9}
+                  onChange={(val) =>
+                    setThresholds({
+                      ...thresholds,
+                      ph: { ...thresholds.ph, max: val }
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <ThresholdInput
+                  label="Dissolved Oxygen (Min)"
+                  value={thresholds.dissolvedO2.min}
+                  unit="mg/L"
+                  icon={Activity}
+                  min={3}
+                  max={10}
+                  onChange={(val) =>
+                    setThresholds({
+                      ...thresholds,
+                      dissolvedO2: { ...thresholds.dissolvedO2, min: val }
+                    })
+                  }
+                />
+                <ThresholdInput
+                  label="Ammonia Level (Max)"
+                  value={thresholds.ammonia.max}
+                  unit="ppm"
+                  icon={AlertTriangle}
+                  min={0}
+                  max={2}
+                  onChange={(val) =>
+                    setThresholds({
+                      ...thresholds,
+                      ammonia: { ...thresholds.ammonia, max: val }
+                    })
+                  }
+                />
+              </div>
             </div>
           </div>
+
 
           {/* System Info */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
