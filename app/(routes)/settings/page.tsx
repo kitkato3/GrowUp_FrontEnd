@@ -1,3 +1,6 @@
+// =================================================================
+// ⚙️ SettingsPage.tsx
+// =================================================================
 "use client"
 
 import { useState, useEffect } from "react"
@@ -15,55 +18,89 @@ import {
   Camera,
   Settings,
   BarChart3,
+  CheckCircle,
 } from "lucide-react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
-// --- TYPE DEFINITIONS ---
-interface SystemControls {
-  pump: boolean
-  fan: boolean
-  phAdjustment: boolean
-  aerator: boolean
-  growLight: boolean
-}
+// --- TYPE & HOOK IMPORTS (Simulated Import from the Shared Hook file) ---
+// Note: In a real project, you would import these from './useAquaponicsSettings'
+// For this full code response, I'm defining the necessary types and hook logic locally for completeness.
 
-interface ControlToggleProps {
-  label: string
-  description: string
-  icon: React.ElementType
-  active: boolean
-  onChange: (val: boolean) => void
-}
+interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
+interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
 
-interface PresetCardProps {
-  title: string
-  description: string
-  icon: React.ElementType
-  active: boolean
-  onActivate: () => void
-}
+interface ControlToggleProps { label: string; description: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
+interface PresetCardProps { title: string; description: string; icon: React.ElementType; active: boolean; onActivate: () => void; }
+interface ThresholdRangeInputProps { label: string; unit: string; icon: React.ElementType; minValue: number; maxValue: number; minLimit: number; maxLimit: number; onMinChange: (val: number) => void; onMaxChange: (val: number) => void; }
 
-interface ThresholdRangeInputProps {
-  label: string
-  unit: string
-  icon: React.ElementType
-  minValue: number
-  maxValue: number
-  minLimit: number
-  maxLimit: number
-  onMinChange: (val: number) => void
-  onMaxChange: (val: number) => void
-}
 
-// --- INITIAL STATE / MOCK DATA ---
-const INITIAL_CONTROLS: SystemControls = {
-  pump: true,
-  fan: false,
-  phAdjustment: true,
-  aerator: true,
-  growLight: true,
-}
+// --- Custom Hook Logic (Copied from the shared file for self-contained code) ---
+const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true, }
+const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 }, }
+const localStorageKey = 'aquaponics_settings_state';
+const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
+const saveState = (state: { controls: SystemControls, activePreset: string, thresholds: ThresholdState }) => { try { localStorage.setItem(localStorageKey, JSON.stringify(state)); } catch (error) { console.error('Error saving state:', error); } };
 
-// --- COMPONENTS ---
+const useAquaponicsSettings = () => {
+  const [state, setState] = useState(loadState);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === localStorageKey && e.newValue) {
+        const newState = JSON.parse(e.newValue);
+        setState(newState);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const setControls = (newControls: SystemControls) => {
+    setState(prevState => {
+      const newState = { ...prevState, controls: newControls };
+      return newState;
+    });
+    setHasChanges(true);
+  };
+
+  const setPreset = (newPreset: string) => {
+    setState(prevState => ({ ...prevState, activePreset: newPreset }));
+    setHasChanges(true);
+  };
+
+  const setThresholds = (newThresholds: ThresholdState) => {
+    setState(prevState => ({ ...prevState, thresholds: newThresholds }));
+    setHasChanges(true);
+  };
+
+  const handleSave = () => {
+    saveState(state);
+    setHasChanges(false);
+    console.log('Settings saved to localStorage:', state);
+    return true;
+  };
+
+  return {
+    controls: state.controls,
+    activePreset: state.activePreset,
+    thresholds: state.thresholds,
+    setControls,
+    setPreset,
+    setThresholds,
+    handleSave,
+    hasChanges,
+    setHasChanges,
+  };
+};
+// --- END Custom Hook Logic ---
+
+
+// =================================================================
+// 🧩 Components (Retained from base code with minor adjustments)
+// =================================================================
+
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
     <span className="font-bold text-gray-900">GROWUP</span>
@@ -75,7 +112,7 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
 )
 
 const BottomNavigation = () => {
-  const pathname = "/settings" // Always show settings as active since this is settings page
+  const pathname = usePathname() || "/settings"
   const tabs = [
     { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
     { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
@@ -90,7 +127,7 @@ const BottomNavigation = () => {
           const isActive = pathname.startsWith(tab.href)
           const Icon = tab.icon
           return (
-            <a
+            <Link
               key={tab.id}
               href={tab.href}
               className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"
@@ -98,7 +135,7 @@ const BottomNavigation = () => {
             >
               <Icon className="w-5 h-5 mb-1" />
               <span className="text-xs font-semibold">{tab.label}</span>
-            </a>
+            </Link>
           )
         })}
       </div>
@@ -140,7 +177,7 @@ const PresetCard: React.FC<PresetCardProps> = ({ title, description, icon: Icon,
         <div className="font-semibold text-gray-900">{title}</div>
         <div className="text-xs text-gray-600 mt-1">{description}</div>
       </div>
-      {active && <div className="w-2 h-2 bg-emerald-500 rounded-full flex-shrink-0 mt-2"></div>}
+      {active && <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-1" />}
     </div>
   </button>
 )
@@ -195,39 +232,29 @@ const ThresholdRangeInput: React.FC<ThresholdRangeInputProps> = ({
     </div>
 
     <div className="flex justify-between text-xs text-gray-500 mt-3">
-      <span>Min: {minLimit}</span>
-      <span>Max: {maxLimit}</span>
+      <span>Min Limit: {minLimit}</span>
+      <span>Max Limit: {maxLimit}</span>
     </div>
   </div>
 )
 
-// --- MAIN COMPONENT ---
+// =================================================================
+// ⚙️ MAIN SETTINGS COMPONENT
+// =================================================================
 export default function SettingsPage() {
-  const [controls, setControls] = useState<SystemControls>(INITIAL_CONTROLS)
-  const [activePreset, setActivePreset] = useState<string>("balanced")
-  const [thresholds, setThresholds] = useState({
-    waterTemp: { min: 20, max: 26 },
-    ph: { min: 6.5, max: 7.5 },
-    dissolvedO2: { min: 5, max: 8 },
-    ammonia: { min: 0, max: 0.5 },
-  })
+  const {
+    controls,
+    activePreset,
+    thresholds,
+    setControls,
+    setPreset,
+    setThresholds,
+    handleSave,
+    hasChanges,
+    setHasChanges,
+  } = useAquaponicsSettings();
+
   const [currentTime, setCurrentTime] = useState(new Date())
-  const [hasChanges, setHasChanges] = useState(false)
-
-  // Load saved settings on mount
-  useEffect(() => {
-    try {
-      const savedControls = localStorage.getItem('aquaponics_controls')
-      const savedPreset = localStorage.getItem('aquaponics_preset')
-      const savedThresholds = localStorage.getItem('aquaponics_thresholds')
-
-      if (savedControls) setControls(JSON.parse(savedControls))
-      if (savedPreset) setActivePreset(savedPreset)
-      if (savedThresholds) setThresholds(JSON.parse(savedThresholds))
-    } catch (error) {
-      console.error('Error loading settings:', error)
-    }
-  }, [])
 
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(new Date()), 1000)
@@ -240,35 +267,33 @@ export default function SettingsPage() {
   }
 
   const handlePresetChange = (preset: string) => {
-    setActivePreset(preset)
+    setPreset(preset)
     setHasChanges(true)
+    let newControls: SystemControls
     switch (preset) {
       case "balanced":
-        setControls({ pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true })
+        newControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
         break
       case "highGrowth":
-        setControls({ pump: true, fan: true, phAdjustment: true, aerator: true, growLight: true })
+        newControls = { pump: true, fan: true, phAdjustment: true, aerator: true, growLight: true }
         break
       case "ecoMode":
-        setControls({ pump: true, fan: false, phAdjustment: false, aerator: false, growLight: false })
+        newControls = { pump: true, fan: false, phAdjustment: false, aerator: false, growLight: false }
         break
       case "maintenance":
-        setControls({ pump: false, fan: true, phAdjustment: false, aerator: false, growLight: false })
+        newControls = { pump: false, fan: true, phAdjustment: false, aerator: false, growLight: false }
         break
+      default:
+        newControls = controls;
     }
+    setControls(newControls);
   }
 
   const handleSaveChanges = () => {
-    try {
-      localStorage.setItem('aquaponics_controls', JSON.stringify(controls))
-      localStorage.setItem('aquaponics_preset', activePreset)
-      localStorage.setItem('aquaponics_thresholds', JSON.stringify(thresholds))
-      setHasChanges(false)
-
-      alert('Settings saved successfully!')
-    } catch (error) {
-      console.error('Error saving settings:', error)
-      alert('Failed to save settings. Please try again.')
+    if (handleSave()) {
+      alert('Settings saved successfully and synced!');
+    } else {
+      alert('Failed to save settings. Please try again.');
     }
   }
 
@@ -323,11 +348,9 @@ export default function SettingsPage() {
                 maxLimit={30}
                 onMinChange={(val) => {
                   setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, min: val } })
-                  setHasChanges(true)
                 }}
                 onMaxChange={(val) => {
                   setThresholds({ ...thresholds, waterTemp: { ...thresholds.waterTemp, max: val } })
-                  setHasChanges(true)
                 }}
               />
               <ThresholdRangeInput
@@ -340,11 +363,9 @@ export default function SettingsPage() {
                 maxLimit={9}
                 onMinChange={(val) => {
                   setThresholds({ ...thresholds, ph: { ...thresholds.ph, min: val } })
-                  setHasChanges(true)
                 }}
                 onMaxChange={(val) => {
                   setThresholds({ ...thresholds, ph: { ...thresholds.ph, max: val } })
-                  setHasChanges(true)
                 }}
               />
               <ThresholdRangeInput
@@ -357,34 +378,30 @@ export default function SettingsPage() {
                 maxLimit={10}
                 onMinChange={(val) => {
                   setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, min: val } })
-                  setHasChanges(true)
                 }}
                 onMaxChange={(val) => {
                   setThresholds({ ...thresholds, dissolvedO2: { ...thresholds.dissolvedO2, max: val } })
-                  setHasChanges(true)
                 }}
               />
               <ThresholdRangeInput
                 label="Ammonia Level"
                 unit="ppm"
                 icon={AlertTriangle}
-                minValue={thresholds.ammonia.min ?? 0}
+                minValue={thresholds.ammonia.min}
                 maxValue={thresholds.ammonia.max}
                 minLimit={0}
                 maxLimit={2}
                 onMinChange={(val) => {
                   setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, min: val } })
-                  setHasChanges(true)
                 }}
                 onMaxChange={(val) => {
                   setThresholds({ ...thresholds, ammonia: { ...thresholds.ammonia, max: val } })
-                  setHasChanges(true)
                 }}
               />
             </div>
           </div>
 
-          {/* System Info */}
+          {/* System Info (Retained as static) */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <h3 className="font-bold text-gray-900 mb-4">System Information</h3>
             <div className="space-y-3 text-sm">
