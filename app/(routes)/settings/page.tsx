@@ -1,6 +1,3 @@
-// =================================================================
-// ⚙️ SettingsPage.tsx
-// =================================================================
 "use client"
 
 import { useState, useEffect } from "react"
@@ -24,7 +21,6 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 // --- TYPE & HOOK IMPORTS (Simulated Import) ---
-// Unified SystemControls now includes 'growLight'
 interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
 interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
 
