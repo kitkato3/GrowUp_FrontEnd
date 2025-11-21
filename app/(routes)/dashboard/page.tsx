@@ -148,41 +148,25 @@ export default function Dashboard() {
   }
 
   const ControlsModal = () => {
-    const handleLocalControlChange = (key: keyof ControlState, val: boolean) => {
-      setLocalControls(prev => ({ ...prev, [key]: val }));
-    };
-
+    const handleLocalControlChange = (key: keyof ControlState, val: boolean) => { setLocalControls(prev => ({ ...prev, [key]: val })) }
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-        <div className="w-full bg-white rounded-t-3xl p-6 max-w-md mx-auto max-h-[90vh] flex flex-col">
+        <div className="w-full bg-white rounded-t-3xl p-6 max-w-md mx-auto max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Quick Controls</h2>
-            <button onClick={() => setShowControlsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-              <X className="w-6 h-6" />
-            </button>
+            <button onClick={() => setShowControlsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-6 h-6" /></button>
           </div>
-
-          {/* Scrollable controls list */}
-          <div className="space-y-3 flex-1 overflow-y-auto">
-            <ControlToggle label="Submersible Pump" icon={Waves} active={localControls.pump} onChange={val => handleLocalControlChange('pump', val)} />
-            <ControlToggle label="DC Fan" icon={Wind} active={localControls.fan} onChange={val => handleLocalControlChange('fan', val)} />
-            <ControlToggle label="pH Adjustment" icon={Droplets} active={localControls.phAdjustment} onChange={val => handleLocalControlChange('phAdjustment', val)} />
-            <ControlToggle label="Aerator" icon={Activity} active={localControls.aerator} onChange={val => handleLocalControlChange('aerator', val)} />
-            <ControlToggle label="Grow Light" icon={Sun} active={localControls.growLight} onChange={val => handleLocalControlChange('growLight', val)} />
+          <div className="space-y-3">
+            <ControlToggle label="Submersible Pump" icon={Waves} active={localControls.pump} onChange={(val) => handleLocalControlChange('pump', val)} />
+            <ControlToggle label="DC Fan" icon={Wind} active={localControls.fan} onChange={(val) => handleLocalControlChange('fan', val)} />
+            <ControlToggle label="pH Adjustment" icon={Droplets} active={localControls.phAdjustment} onChange={(val) => handleLocalControlChange('phAdjustment', val)} />
+            <ControlToggle label="Aerator" icon={Activity} active={localControls.aerator} onChange={(val) => handleLocalControlChange('aerator', val)} />
+            <ControlToggle label="Grow Light" icon={Sun} active={localControls.growLight} onChange={(val) => handleLocalControlChange('growLight', val)} />
           </div>
-
-          {/* Done button always visible */}
-          <button
-            onClick={handleQuickControlsSave}
-            className="mt-4 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors"
-          >
-            Done
-          </button>
-        </div>
+          <button onClick={() => setShowControlsModal(false)} className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">Done</button>        </div>
       </div>
-    );
-  };
-
+    )
+  }
 
   const CameraModal = () => (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
