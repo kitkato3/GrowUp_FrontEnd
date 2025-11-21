@@ -151,7 +151,7 @@ export default function Dashboard() {
     const handleLocalControlChange = (key: keyof ControlState, val: boolean) => { setLocalControls(prev => ({ ...prev, [key]: val })) }
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
-        <div className="w-full bg-white rounded-t-3xl p-6 max-w-md mx-auto max-h-[90vh] overflow-y-auto">
+        <div className="w-full bg-white rounded-t-3xl p-6 max-w-md mx-auto max-h-[200vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-gray-900">Quick Controls</h2>
             <button onClick={() => setShowControlsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-6 h-6" /></button>
