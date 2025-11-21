@@ -27,7 +27,7 @@ import { usePathname } from "next/navigation"
 // Note: In a real project, you would import these from './useAquaponicsSettings'
 // For this full code response, I'm defining the necessary types and hook logic locally for completeness.
 
-interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
+interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; }
 interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
 
 interface ControlToggleProps { label: string; description: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
@@ -36,7 +36,7 @@ interface ThresholdRangeInputProps { label: string; unit: string; icon: React.El
 
 
 // --- Custom Hook Logic (Copied from the shared file for self-contained code) ---
-const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true, }
+const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, }
 const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 }, }
 const localStorageKey = 'aquaponics_settings_state';
 const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
@@ -272,16 +272,16 @@ export default function SettingsPage() {
     let newControls: SystemControls
     switch (preset) {
       case "balanced":
-        newControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
+        newControls = { pump: true, fan: false, phAdjustment: true, aerator: true }
         break
       case "highGrowth":
-        newControls = { pump: true, fan: true, phAdjustment: true, aerator: true, growLight: true }
+        newControls = { pump: true, fan: true, phAdjustment: true, aerator: true }
         break
       case "ecoMode":
-        newControls = { pump: true, fan: false, phAdjustment: false, aerator: false, growLight: false }
+        newControls = { pump: true, fan: false, phAdjustment: false, aerator: false }
         break
       case "maintenance":
-        newControls = { pump: false, fan: true, phAdjustment: false, aerator: false, growLight: false }
+        newControls = { pump: false, fan: true, phAdjustment: false, aerator: false }
         break
       default:
         newControls = controls;
@@ -316,7 +316,6 @@ export default function SettingsPage() {
               <ControlToggle label="DC Fan" description="Air circulation & cooling" icon={Wind} active={controls.fan} onChange={(val) => handleControlChange('fan', val)} />
               <ControlToggle label="pH Adjustment" description="Automatic pH balancing" icon={Droplets} active={controls.phAdjustment} onChange={(val) => handleControlChange('phAdjustment', val)} />
               <ControlToggle label="Aerator" description="Oxygen circulation" icon={Activity} active={controls.aerator} onChange={(val) => handleControlChange('aerator', val)} />
-              <ControlToggle label="Grow Light" description="LED lighting system" icon={Sun} active={controls.growLight} onChange={(val) => handleControlChange('growLight', val)} />
             </div>
           </div>
 
