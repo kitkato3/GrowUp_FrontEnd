@@ -405,7 +405,7 @@ export default function App() {
             {/* Gallery Modal */}
             {showGallery && !selectedSnapshot && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-                    <div className="max-w-md w-full h-full max-h-[95vh] flex flex-col">
+                    <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-2xl">
                             <div><h2 className="text-xl font-bold text-gray-900">Snapshot Gallery</h2><p className="text-sm text-gray-500">Automatic 8:00 AM captures</p></div>
                             <button onClick={() => setShowGallery(false)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full"><X className="w-6 h-6" /></button>
@@ -429,7 +429,7 @@ export default function App() {
             {/* Full View Modal */}
             {selectedSnapshot && (
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
-                    <div className="max-w-4xl w-full h-full max-h-[95vh] flex flex-col">
+                    <div className="max-w-md w-full h-full max-h-[95vh] flex flex-col">
                         <div className="flex items-center justify-between mb-4 flex-shrink-0">
                             <button onClick={() => setSelectedSnapshot(null)} className="flex items-center gap-2 text-white hover:text-emerald-400 transition-colors font-semibold"><span className="text-2xl">←</span>Back to Gallery</button>
                             <button onClick={() => { setSelectedSnapshot(null); setShowGallery(false); }} className="text-white hover:text-red-500 transition-colors p-2 rounded-full"><X className="w-8 h-8" /></button>
