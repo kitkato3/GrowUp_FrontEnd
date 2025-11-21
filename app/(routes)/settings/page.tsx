@@ -412,8 +412,8 @@ export default function SettingsPage() {
             onClick={handleSaveChanges}
             disabled={!hasChanges}
             className={`w-full py-4 font-bold rounded-xl shadow-lg transition-all ${hasChanges
-                ? 'bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-xl'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-emerald-600 hover:bg-emerald-700 text-white hover:shadow-xl'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
           >
             {hasChanges ? 'Save All Changes' : 'No Changes to Save'}
