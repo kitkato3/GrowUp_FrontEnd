@@ -212,12 +212,11 @@ const ThresholdRangeInput: React.FC<ThresholdRangeInputProps> = ({
     <div className="flex items-center gap-2 mb-3">
       <Icon className="w-4 h-4 text-gray-600" />
       <span className="font-medium text-gray-900 text-sm">{label}</span>
-      <span className="text-xs text-gray-400">({unit})</span>
     </div>
 
     <div className="flex items-center gap-3">
       <div className="flex-1">
-        <span className="text-xs text-gray-500">Min Alert</span>
+        <span className="text-xs text-gray-500">Min</span>
         <input
           type="number"
           value={minValue}
@@ -232,7 +231,7 @@ const ThresholdRangeInput: React.FC<ThresholdRangeInputProps> = ({
       <span className="text-gray-400 font-medium mt-5">—</span>
 
       <div className="flex-1">
-        <span className="text-xs text-gray-500">Max Alert</span>
+        <span className="text-xs text-gray-500">Max</span>
         <input
           type="number"
           value={maxValue}
@@ -243,10 +242,13 @@ const ThresholdRangeInput: React.FC<ThresholdRangeInputProps> = ({
           className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
       </div>
+
+      <span className="text-sm font-medium text-gray-600 w-10">{unit}</span>
     </div>
 
-    <div className="flex justify-between text-xs text-gray-500 mt-3 border-t border-gray-200 pt-2">
-      <span>System Limits: {minLimit} to {maxLimit}</span>
+    <div className="flex justify-between text-xs text-gray-500 mt-3">
+      <span>Min Limit: {minLimit}</span>
+      <span>Max Limit: {maxLimit}</span>
     </div>
   </div>
 )
