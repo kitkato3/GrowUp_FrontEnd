@@ -13,7 +13,6 @@ interface SystemControls {
   phAdjustment: boolean;
   aerator: boolean;
   growLight: boolean;
-  heater: boolean;
 }
 
 interface ControlToggleProps {
@@ -45,7 +44,7 @@ interface ThresholdInputProps {
 // --- INITIAL STATE / MOCK DATA ---
 
 const INITIAL_CONTROLS: SystemControls = {
-  pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true, heater: false,
+  pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true,
 }
 
 // --- NAVIGATION COMPONENTS (Local definitions) ---
@@ -113,8 +112,8 @@ const PresetCard: React.FC<PresetCardProps> = ({ title, description, icon: Icon,
   <button
     onClick={onActivate}
     className={`w-full p-4 rounded-xl border-2 transition-all text-left ${active
-        ? 'border-emerald-500 bg-emerald-50'
-        : 'border-gray-200 bg-white hover:border-gray-300'
+      ? 'border-emerald-500 bg-emerald-50'
+      : 'border-gray-200 bg-white hover:border-gray-300'
       }`}
   >
     <div className="flex items-start gap-3">
@@ -194,7 +193,6 @@ export default function Settings() {
           phAdjustment: true,
           aerator: true,
           growLight: true,
-          heater: false,
         })
         break
       case "highGrowth":
@@ -204,7 +202,6 @@ export default function Settings() {
           phAdjustment: true,
           aerator: true,
           growLight: true,
-          heater: true,
         })
         break
       case "ecoMode":
@@ -214,7 +211,6 @@ export default function Settings() {
           phAdjustment: false,
           aerator: false,
           growLight: false,
-          heater: false,
         })
         break
       case "maintenance":
@@ -224,7 +220,6 @@ export default function Settings() {
           phAdjustment: false,
           aerator: false,
           growLight: false,
-          heater: false,
         })
         break
     }
@@ -280,13 +275,6 @@ export default function Settings() {
                 icon={Sun}
                 active={controls.growLight}
                 onChange={(val) => handleControlChange('growLight', val)}
-              />
-              <ControlToggle
-                label="Water Heater"
-                description="Temperature regulation"
-                icon={Zap}
-                active={controls.heater}
-                onChange={(val) => handleControlChange('heater', val)}
               />
             </div>
           </div>
