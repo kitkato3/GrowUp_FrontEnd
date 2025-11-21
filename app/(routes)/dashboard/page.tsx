@@ -1,5 +1,5 @@
 // =================================================================
-// 🚀 Dashboard.tsx
+// 🏡 Dashboard.tsx (e.g., app/dashboard/page.tsx)
 // =================================================================
 "use client"
 
@@ -8,85 +8,32 @@ import { Thermometer, Droplets, Activity, Zap, Waves, Gauge, Wind, Fish, Chevron
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-// --- TYPE DEFINITIONS (Matching Dashboard needs) ---
+// --- TYPE DEFINITIONS ---
+interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
+interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
+interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; } // Subset for Dashboard Quick Controls
+
 interface SensorCardProps { icon: React.ElementType; title: string; value: number; unit: string; min: number; max: number; color: string; }
-interface ControlToggleProps {
-  label: string;
-  icon: React.ElementType;
-  active: boolean;
-  onChange: (val: boolean) => void;
-}
 interface SensorDataState { waterTemp: number; ph: number; dissolvedO2: number; waterLevel: number; waterFlow: number; humidity: number; ammonia: number; lightIntensity: number; }
-interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; } // Dashboard only needs these 4
 interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string; }
+interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
+
 
 // --- MOCK DATA / RANGES ---
 const ALERTS_DATA: AlertData[] = [
   { id: 1, type: "warning", severity: "medium", title: "pH Level Slightly Low", message: "Current pH is 6.2...", time: "5 minutes ago" },
   { id: 2, type: "info", severity: "low", title: "System Running Optimally", message: "All parameters are within ideal ranges.", time: "15 minutes ago" },
-  { id: 3, type: "warning", severity: "medium", title: "Maintenance Due Soon", message: "Filter cleaning scheduled in 3 days.", time: "2 hours ago" },
 ]
-const SENSOR_RANGES = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, lightIntensity: { min: 10000, max: 20000 }, waterLevel: { min: 70, max: 100 }, waterFlow: { min: 3, max: 6 }, humidity: { min: 50, max: 80 }, ammonia: { min: 0, max: 1 } }
 const INITIAL_SENSOR_DATA: SensorDataState = { waterTemp: 23.2, ph: 6.8, dissolvedO2: 7.2, waterLevel: 85, waterFlow: 4.5, humidity: 65, ammonia: 0.3, lightIntensity: 15000 }
 
-// --- UTILITY FUNCTIONS (Local) ---
-type ThresholdStatus = "good" | "warning" | "critical";
-const getThresholdStatus = (value: number, min: number, max: number): ThresholdStatus => { if (value < min || value > max) return "critical"; if (value < min + (max - min) * 0.1 || value > max - (max - min) * 0.1) return "warning"; return "good"; }
-const getStatusColor = (status: ThresholdStatus): string => { switch (status) { case "good": return "bg-emerald-500"; case "warning": return "bg-amber-500"; case "critical": return "bg-red-500"; default: return "bg-gray-500"; } }
-const calculatePercentage = (value: number, min: number, max: number): number => { return ((value - min) / (max - min)) * 100 }
 
-// =================================================================
-// 💡 Custom Hook for Shared State (Must be identical to the one in SettingsPage for sync)
-// =================================================================
-interface SystemControls {
-  pump: boolean
-  fan: boolean
-  phAdjustment: boolean
-  aerator: boolean
-  growLight: boolean
-}
-interface ThresholdState {
-  waterTemp: { min: number; max: number }
-  ph: { min: number; max: number }
-  dissolvedO2: { min: number; max: number }
-  ammonia: { min: number; max: number }
-}
-const INITIAL_CONTROLS_FULL: SystemControls = {
-  pump: true,
-  fan: false,
-  phAdjustment: true,
-  aerator: true,
-  growLight: true,
-}
-const INITIAL_THRESHOLDS: ThresholdState = {
-  waterTemp: { min: 20, max: 26 },
-  ph: { min: 6.5, max: 7.5 },
-  dissolvedO2: { min: 5, max: 8 },
-  ammonia: { min: 0, max: 0.5 },
-}
+// --- Custom Hook Logic (Shared State Management) ---
+const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true, }
+const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 }, }
 const localStorageKey = 'aquaponics_settings_state';
 
-const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => {
-  try {
-    const savedState = localStorage.getItem(localStorageKey);
-    if (savedState) return JSON.parse(savedState);
-  } catch (error) {
-    console.error('Error loading state:', error);
-  }
-  return {
-    controls: INITIAL_CONTROLS_FULL,
-    activePreset: "balanced",
-    thresholds: INITIAL_THRESHOLDS,
-  };
-};
-
-const saveState = (state: { controls: SystemControls, activePreset: string, thresholds: ThresholdState }) => {
-  try {
-    localStorage.setItem(localStorageKey, JSON.stringify(state));
-  } catch (error) {
-    console.error('Error saving state:', error);
-  }
-};
+const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
+const saveState = (state: { controls: SystemControls, activePreset: string, thresholds: ThresholdState }) => { try { localStorage.setItem(localStorageKey, JSON.stringify(state)); } catch (error) { console.error('Error saving state:', error); } };
 
 const useAquaponicsSettings = () => {
   const [state, setState] = useState(loadState);
@@ -102,33 +49,26 @@ const useAquaponicsSettings = () => {
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
-  const setControls = (newControls: SystemControls) => {
-    setState(prevState => {
-      const newState = { ...prevState, controls: newControls };
-      return newState;
-    });
-  };
-
-  // Quick save for controls (used in Dashboard modal)
   const quickSaveControls = (newControls: SystemControls) => {
     setState(prevState => {
       const newState = { ...prevState, controls: newControls };
-      saveState(newState); // Save immediately
+      saveState(newState);
       return newState;
     });
   }
-
-
-  return {
-    controls: state.controls,
-    quickSaveControls,
-    // We expose only controls here, not the rest for a clean dashboard view
-  };
+  return { controls: state.controls, quickSaveControls };
 };
-// =================================================================
+// --- END Custom Hook Logic ---
 
 
-// --- NAVIGATION COMPONENTS (Local definitions) ---
+// --- UTILITY FUNCTIONS ---
+type ThresholdStatus = "good" | "warning" | "critical";
+const getThresholdStatus = (value: number, min: number, max: number): ThresholdStatus => { if (value < min || value > max) return "critical"; if (value < min + (max - min) * 0.1 || value > max - (max - min) * 0.1) return "warning"; return "good"; }
+const getStatusColor = (status: ThresholdStatus): string => { switch (status) { case "good": return "bg-emerald-500"; case "warning": return "bg-amber-500"; case "critical": return "bg-red-500"; default: return "bg-gray-500"; } }
+const calculatePercentage = (value: number, min: number, max: number): number => { return ((value - min) / (max - min)) * 100 }
+
+
+// --- NAVIGATION COMPONENTS ---
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
     <span className="font-bold text-gray-900">GROWUP</span>
@@ -187,20 +127,23 @@ export default function Dashboard() {
   // Local state for controls *inside* the modal to prevent flicker/immediate save
   const [localControls, setLocalControls] = useState<ControlState>({ pump: controls.pump, fan: controls.fan, phAdjustment: controls.phAdjustment, aerator: controls.aerator });
 
-
   const [sensorData, setSensorData] = useState<SensorDataState>(INITIAL_SENSOR_DATA)
 
   const alerts = ALERTS_DATA
 
-  // Sync localControls state when controls from useAquaponicsSettings change, especially when modal is closed
+  // Sync localControls state when controls from useAquaponicsSettings change, 
+  // especially when modal opens or settings page forces a change.
   useEffect(() => {
-    setLocalControls({
-      pump: controls.pump,
-      fan: controls.fan,
-      phAdjustment: controls.phAdjustment,
-      aerator: controls.aerator,
-    });
-  }, [controls]);
+    // Sync localControls when modal opens
+    if (showControlsModal) {
+      setLocalControls({
+        pump: controls.pump,
+        fan: controls.fan,
+        phAdjustment: controls.phAdjustment,
+        aerator: controls.aerator,
+      });
+    }
+  }, [showControlsModal, controls.pump, controls.fan, controls.phAdjustment, controls.aerator]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -231,19 +174,10 @@ export default function Dashboard() {
   }
 
   const ControlsModal = () => {
+    // Tiyakin na ang function na ito ay nag-uupdate ng localControls
     const handleLocalControlChange = (key: keyof ControlState, val: boolean) => {
       setLocalControls(prev => ({ ...prev, [key]: val }));
     };
-
-    // Initialize localControls when modal opens
-    useEffect(() => {
-      setLocalControls({
-        pump: controls.pump,
-        fan: controls.fan,
-        phAdjustment: controls.phAdjustment,
-        aerator: controls.aerator,
-      });
-    }, [showControlsModal]);
 
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-end">
@@ -253,12 +187,38 @@ export default function Dashboard() {
             <button onClick={() => setShowControlsModal(false)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors"><X className="w-6 h-6" /></button>
           </div>
           <div className="space-y-3">
-            <ControlToggle label="Submersible Pump" icon={Waves} active={localControls.pump} onChange={(val: boolean) => handleLocalControlChange('pump', val)} />
-            <ControlToggle label="DC Fan" icon={Wind} active={localControls.fan} onChange={(val: boolean) => handleLocalControlChange('fan', val)} />
-            <ControlToggle label="pH Adjustment" icon={Droplets} active={localControls.phAdjustment} onChange={(val: boolean) => handleLocalControlChange('phAdjustment', val)} />
-            <ControlToggle label="Aerator" icon={Activity} active={localControls.aerator} onChange={(val: boolean) => handleLocalControlChange('aerator', val)} />
+            {/* FIX: Using localControls for active state and handleLocalControlChange for onChange */}
+            <ControlToggle
+              label="Submersible Pump"
+              icon={Waves}
+              active={localControls.pump}
+              onChange={(val: boolean) => handleLocalControlChange('pump', val)}
+            />
+            <ControlToggle
+              label="DC Fan"
+              icon={Wind}
+              active={localControls.fan}
+              onChange={(val: boolean) => handleLocalControlChange('fan', val)}
+            />
+            <ControlToggle
+              label="pH Adjustment"
+              icon={Droplets}
+              active={localControls.phAdjustment}
+              onChange={(val: boolean) => handleLocalControlChange('phAdjustment', val)}
+            />
+            <ControlToggle
+              label="Aerator"
+              icon={Activity}
+              active={localControls.aerator}
+              onChange={(val: boolean) => handleLocalControlChange('aerator', val)}
+            />
           </div>
-          <button onClick={handleQuickControlsSave} className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">Done (Save Changes)</button>
+          <button
+            onClick={handleQuickControlsSave}
+            className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors"
+          >
+            Done
+          </button>
         </div>
       </div>
     )
