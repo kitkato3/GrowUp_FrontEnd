@@ -81,7 +81,7 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
 )
 
 const BottomNavigation = () => {
-  const pathname = "/dashboard"
+  const pathname = usePathname() || "/dashboard"
   const tabs = [
     { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
     { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
@@ -95,10 +95,14 @@ const BottomNavigation = () => {
           const isActive = pathname.startsWith(tab.href)
           const Icon = tab.icon
           return (
-            <div key={tab.id} className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all cursor-pointer ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}>
+            <Link
+              key={tab.id}
+              href={tab.href}
+              className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
+            >
               <Icon className="w-5 h-5 mb-1" />
               <span className="text-xs font-semibold">{tab.label}</span>
-            </div>
+            </Link>
           )
         })}
       </div>
