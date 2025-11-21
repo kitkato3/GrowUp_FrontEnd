@@ -355,7 +355,7 @@ export default function Analytics() {
             </div>
 
             {/* Growth Stats */}
-            <div className="grid grid-cols-3 gap-3 mt-4">
+            <div className="grid grid-cols- gap-3 mt-4">
               <div className="bg-emerald-50 rounded-lg p-3 text-center">
                 <div className="text-xs text-gray-600">Current Height</div>
                 <div className="text-2xl font-bold text-emerald-600">
@@ -372,13 +372,6 @@ export default function Analytics() {
                       filteredGrowthData[0].height
                     ).toFixed(1)}cm`
                     : "—"}
-                </div>
-              </div>
-
-              <div className="bg-purple-50 rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-600">Leaf Count</div>
-                <div className="text-2xl font-bold text-purple-600">
-                  {lastGrowth?.leaves ?? 12}
                 </div>
               </div>
             </div>
