@@ -341,6 +341,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* REVISED: Water-only Critical Metrics */}
         <div>
           <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Water Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -351,18 +352,17 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* NEW AIR METRICS SECTION */}
+        {/* NEW: Environmental Metrics (Air Temp, Pressure, Humidity) */}
         <div>
-          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Air Metrics</h2>
+          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Environmental Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
             <SensorCard icon={Thermometer} title="Air Temp" value={sensorData.airTemp} unit="°C" min={20} max={30} color="bg-orange-500" />
-            <SensorCard icon={Gauge} title="Air Pressure" value={sensorData.airPressure} unit="hPa" min={990} max={1030} color="bg-red-500" />
-            {/* Humidity moved here for better grouping */}
             <SensorCard icon={Wind} title="Humidity" value={sensorData.humidity} unit="%" min={50} max={80} color="bg-sky-500" />
+            <SensorCard icon={Gauge} title="Air Pressure" value={sensorData.airPressure} unit="hPa" min={990} max={1030} color="bg-red-500" />
           </div>
         </div>
-        {/* END NEW AIR METRICS SECTION */}
 
+        {/* REVISED: System Metrics (Water Level, Flow, Ammonia) */}
         <div>
           <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">System Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
