@@ -35,7 +35,7 @@ const ALERTS_DATA: AlertData[] = [
   { id: 3, type: "warning", severity: "medium", title: "Maintenance Due Soon", message: "Filter cleaning scheduled in 3 days.", time: "2 hours ago" },
 ]
 
-// INITIAL_SENSOR_DATA includes Air Temp and Air Pressure
+// INITIAL_SENSOR_DATA
 const INITIAL_SENSOR_DATA: SensorDataState = {
   waterTemp: 23.2,
   ph: 6.8,
@@ -49,7 +49,7 @@ const INITIAL_SENSOR_DATA: SensorDataState = {
   airPressure: 1012.0
 }
 
-// --- INITIAL STATE & HOOKS (No changes here) ---
+// --- INITIAL STATE & HOOKS ---
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
 const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 } }
 const localStorageKey = 'aquaponics_settings_state';
@@ -354,15 +354,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* ENVIRONMENTAL METRICS (BME280 outputs) */}
-        <div>
-          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Environmental Metrics</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <SensorCard icon={Thermometer} title="Air Temp" value={sensorData.airTemp} unit="°C" min={20} max={30} color="bg-orange-500" />
-            <SensorCard icon={Wind} title="Humidity" value={sensorData.humidity} unit="%" min={50} max={80} color="bg-sky-500" />
-            <SensorCard icon={Gauge} title="Air Pressure" value={sensorData.airPressure} unit="hPa" min={990} max={1030} color="bg-red-500" />
-          </div>
-        </div>
 
         {/* CORE SYSTEM METRICS (Flow, Level, Ammonia) */}
         <div>
@@ -371,6 +362,9 @@ export default function Dashboard() {
             <SensorCard icon={Waves} title="Water Level" value={Math.round(sensorData.waterLevel)} unit="%" min={70} max={100} color="bg-cyan-500" />
             <SensorCard icon={Gauge} title="Flow Rate" value={sensorData.waterFlow} unit="L/min" min={3} max={6} color="bg-indigo-500" />
             <SensorCard icon={Fish} title="Ammonia" value={sensorData.ammonia} unit="ppm" min={0} max={1} color="bg-orange-500" />
+            <SensorCard icon={Thermometer} title="Air Temp" value={sensorData.airTemp} unit="°C" min={20} max={30} color="bg-orange-500" />
+            <SensorCard icon={Wind} title="Humidity" value={sensorData.humidity} unit="%" min={50} max={80} color="bg-sky-500" />
+            <SensorCard icon={Gauge} title="Air Pressure" value={sensorData.airPressure} unit="hPa" min={990} max={1030} color="bg-red-500" />
           </div>
         </div>
       </div>
