@@ -20,9 +20,20 @@ import {
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-// --- TYPE & HOOK IMPORTS (Simulated Import) ---
+/* ------------------------------------------------------
+    TYPES & INITIAL STATES
+------------------------------------------------------ */
+
 interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
-interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
+
+// UPDATED: Added airTemp threshold here
+interface ThresholdState {
+  waterTemp: { min: number; max: number };
+  ph: { min: number; max: number };
+  dissolvedO2: { min: number; max: number };
+  ammonia: { min: number; max: number };
+  airTemp: { min: number; max: number }; // NEW: Air Temperature Threshold
+}
 
 interface ControlToggleProps { label: string; description: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
 interface PresetCardProps { title: string; description: string; icon: React.ElementType; active: boolean; onActivate: () => void; }
@@ -31,15 +42,31 @@ interface ThresholdRangeInputProps { label: string; unit: string; icon: React.El
 
 // --- Custom Hook Logic (Unified with localStorage for sync) ---
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true, }
-const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 }, }
+
+// UPDATED: Added initial values for airTemp
+const INITIAL_THRESHOLDS: ThresholdState = {
+  waterTemp: { min: 22, max: 26 },
+  ph: { min: 6.5, max: 7.5 },
+  dissolvedO2: { min: 5, max: 8 },
+  ammonia: { min: 0, max: 0.5 },
+  airTemp: { min: 22, max: 28 }, // NEW: Initial Air Temp Threshold
+}
+
 const localStorageKey = 'aquaponics_settings_state';
 const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => {
   try {
     const savedState = localStorage.getItem(localStorageKey);
     if (savedState) {
+      const parsedState = JSON.parse(savedState);
+      // Ensure the airTemp threshold exists on load, setting to default if not found
       return {
-        ...INITIAL_CONTROLS_FULL, // Ensure all keys exist on load
-        ...JSON.parse(savedState)
+        controls: parsedState.controls || INITIAL_CONTROLS_FULL,
+        activePreset: parsedState.activePreset || "balanced",
+        thresholds: {
+          ...INITIAL_THRESHOLDS,
+          ...parsedState.thresholds,
+          airTemp: parsedState.thresholds?.airTemp || INITIAL_THRESHOLDS.airTemp
+        }
       };
     }
   } catch (error) {
@@ -64,9 +91,8 @@ const useAquaponicsSettings = () => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === localStorageKey && e.newValue) {
         const newState = JSON.parse(e.newValue);
-        // Only update state if it's different from current state (to avoid loop on save)
         setState(newState);
-        setHasChanges(false); // Changes were just synced from another window/tab
+        setHasChanges(false);
       }
     };
     window.addEventListener('storage', handleStorageChange);
@@ -106,9 +132,13 @@ const useAquaponicsSettings = () => {
     setThresholds,
     handleSave,
     hasChanges,
-    setHasChanges, // Exported to be cleared manually if needed, but setters handle setting to true
+    setHasChanges,
   };
 };
+
+/* ------------------------------------------------------
+    COMPONENTS (Navbar, Nav, Toggles, Cards, Input)
+------------------------------------------------------ */
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -247,6 +277,10 @@ const ThresholdRangeInput: React.FC<ThresholdRangeInputProps> = ({
   </div>
 )
 
+/* ------------------------------------------------------
+    MAIN SETTINGS COMPONENT
+------------------------------------------------------ */
+
 export default function SettingsPage() {
   const {
     controls,
@@ -267,31 +301,67 @@ export default function SettingsPage() {
   }, [])
 
   const handleControlChange = (key: keyof SystemControls, val: boolean) => {
-    // Using setControls from the hook, which sets hasChanges to true
     setControls({ ...controls, [key]: val })
   }
 
   const handlePresetChange = (preset: string) => {
     setPreset(preset)
-    // Update controls based on preset
-    let newControls: SystemControls
+
+    let newControls: SystemControls = controls;
+    let newThresholds: ThresholdState = thresholds; // Start with current thresholds
+
     switch (preset) {
       case "balanced":
         newControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
+        newThresholds = {
+          waterTemp: { min: 22.0, max: 26.0 },
+          ph: { min: 6.5, max: 7.5 },
+          dissolvedO2: { min: 5.5, max: 8.0 },
+          ammonia: { min: 0.0, max: 0.2 },
+          airTemp: { min: 22.0, max: 28.0 } // Standard Air Range
+        }
         break
+
       case "highGrowth":
         newControls = { pump: true, fan: true, phAdjustment: true, aerator: true, growLight: true }
+        newThresholds = {
+          waterTemp: { min: 23.5, max: 25.0 }, // Tighter and warmer water for fast metabolism
+          ph: { min: 6.0, max: 7.0 }, // Lower pH for maximum nutrient absorption
+          dissolvedO2: { min: 6.0, max: 8.5 }, // High Oxygen
+          ammonia: { min: 0.0, max: 0.1 }, // Very strict Ammonia
+          airTemp: { min: 24.0, max: 26.0 } // Tight Air Control (to maintain water temp)
+        }
         break
+
       case "ecoMode":
         newControls = { pump: true, fan: false, phAdjustment: false, aerator: false, growLight: false }
+        newThresholds = {
+          waterTemp: { min: 21.0, max: 27.0 }, // Wider range to save energy on heater/chiller
+          ph: { min: 6.0, max: 8.0 }, // Wide pH swing (since phAdjustment is OFF)
+          dissolvedO2: { min: 5.0, max: 8.0 }, // Min DO2 tolerance
+          ammonia: { min: 0.0, max: 0.5 }, // More tolerance
+          airTemp: { min: 20.0, max: 30.0 } // Wide Air Range
+        }
         break
+
       case "maintenance":
         newControls = { pump: false, fan: true, phAdjustment: false, aerator: false, growLight: false }
+        // Keep thresholds stable for safe water quality monitoring during downtime
+        newThresholds = {
+          waterTemp: { min: 22.0, max: 26.0 },
+          ph: { min: 6.5, max: 7.5 },
+          dissolvedO2: { min: 5.5, max: 8.0 },
+          ammonia: { min: 0.0, max: 0.2 },
+          airTemp: { min: 22.0, max: 28.0 }
+        }
         break
       default:
         newControls = controls;
+        newThresholds = thresholds;
     }
-    setControls(newControls); // Use setControls to also mark changes
+
+    setControls(newControls);
+    setThresholds(newThresholds); // Update thresholds state
   }
 
   const handleSaveChanges = () => {
@@ -324,7 +394,7 @@ export default function SettingsPage() {
 
         <div className="space-y-5">
 
-          {/* 1. Automation Presets (Now first, 2x2 grid) */}
+          {/* 1. Automation Presets */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <h3 className="font-bold text-gray-900 mb-4">Automation Presets</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -335,7 +405,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* 2. Control Panel (Now second) */}
+          {/* 2. Control Panel */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <h3 className="font-bold text-gray-900 mb-4">System Controls</h3>
             <div className="space-y-3">
@@ -347,7 +417,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Alert Thresholds (Position unchanged) */}
+          {/* Alert Thresholds */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
             <div className="flex items-center gap-2 mb-4">
               <Bell className="w-5 h-5 text-amber-500" />
@@ -360,19 +430,33 @@ export default function SettingsPage() {
                 icon={Thermometer}
                 minValue={thresholds.waterTemp.min}
                 maxValue={thresholds.waterTemp.max}
-                minLimit={22}
-                maxLimit={24}
+                minLimit={18}
+                maxLimit={30}
                 onMinChange={(val) => handleThresholdChange('waterTemp', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('waterTemp', 'max', val)}
               />
+
+              {/* NEW: Air Temperature Threshold */}
+              <ThresholdRangeInput
+                label="Air Temperature"
+                unit="°C"
+                icon={Wind}
+                minValue={thresholds.airTemp.min}
+                maxValue={thresholds.airTemp.max}
+                minLimit={15}
+                maxLimit={35}
+                onMinChange={(val) => handleThresholdChange('airTemp', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('airTemp', 'max', val)}
+              />
+
               <ThresholdRangeInput
                 label="pH Level"
                 unit=""
                 icon={Droplets}
                 minValue={thresholds.ph.min}
                 maxValue={thresholds.ph.max}
-                minLimit={6.5}
-                maxLimit={7.5}
+                minLimit={6.0}
+                maxLimit={8.0}
                 onMinChange={(val) => handleThresholdChange('ph', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('ph', 'max', val)}
               />
@@ -393,7 +477,7 @@ export default function SettingsPage() {
                 icon={AlertTriangle}
                 minValue={thresholds.ammonia.min}
                 maxValue={thresholds.ammonia.max}
-                minLimit={0.02}
+                minLimit={0.01}
                 maxLimit={2}
                 onMinChange={(val) => handleThresholdChange('ammonia', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('ammonia', 'max', val)}
