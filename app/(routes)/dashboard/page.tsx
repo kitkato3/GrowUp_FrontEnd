@@ -6,12 +6,23 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 // --- UPDATED INTERFACES FOR SYNC ---
-// Now includes growLight to match the Settings page and the full state logic.
 interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
 interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
 interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; } // Must match SystemControls
 interface SensorCardProps { icon: React.ElementType; title: string; value: number; unit: string; min: number; max: number; color: string; }
-interface SensorDataState { waterTemp: number; ph: number; dissolvedO2: number; waterLevel: number; waterFlow: number; humidity: number; ammonia: number; lightIntensity: number; }
+// UPDATED: Added airTemp and airPressure
+interface SensorDataState {
+  waterTemp: number;
+  ph: number;
+  dissolvedO2: number;
+  waterLevel: number;
+  waterFlow: number;
+  humidity: number;
+  ammonia: number;
+  lightIntensity: number;
+  airTemp: number; // New: Air Temperature in °C
+  airPressure: number; // New: Air Pressure in hPa
+}
 interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string; }
 interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
 
@@ -21,7 +32,19 @@ const ALERTS_DATA: AlertData[] = [
   { id: 3, type: "warning", severity: "medium", title: "Maintenance Due Soon", message: "Filter cleaning scheduled in 3 days.", time: "2 hours ago" },
 ]
 
-const INITIAL_SENSOR_DATA: SensorDataState = { waterTemp: 23.2, ph: 6.8, dissolvedO2: 7.2, waterLevel: 85, waterFlow: 4.5, humidity: 65, ammonia: 0.3, lightIntensity: 15000 }
+// UPDATED: Added initial values for airTemp and airPressure
+const INITIAL_SENSOR_DATA: SensorDataState = {
+  waterTemp: 23.2,
+  ph: 6.8,
+  dissolvedO2: 7.2,
+  waterLevel: 85,
+  waterFlow: 4.5,
+  humidity: 65,
+  ammonia: 0.3,
+  lightIntensity: 15000,
+  airTemp: 25.5, // Initial Air Temp
+  airPressure: 1012.0 // Initial Air Pressure
+}
 
 // --- UPDATED INITIAL STATE FOR SYNC ---
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
@@ -169,6 +192,9 @@ export default function Dashboard() {
         ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
         dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
         waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
+        // UPDATED: Mock data updates for new sensors
+        airTemp: Number.parseFloat((24 + Math.random() * 3).toFixed(1)),
+        airPressure: Number.parseFloat((1000 + Math.random() * 25).toFixed(1)),
       }))
     }, 3000)
     return () => clearInterval(interval)
@@ -316,7 +342,7 @@ export default function Dashboard() {
         </div>
 
         <div>
-          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Metrics</h2>
+          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Water Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
             <SensorCard icon={Thermometer} title="Water Temp" value={sensorData.waterTemp} unit="°C" min={20} max={26} color="bg-blue-500" />
             <SensorCard icon={Droplets} title="pH Level" value={sensorData.ph} unit="" min={6.5} max={7.5} color="bg-purple-500" />
@@ -325,12 +351,23 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* NEW AIR METRICS SECTION */}
+        <div>
+          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Air Metrics</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <SensorCard icon={Thermometer} title="Air Temp" value={sensorData.airTemp} unit="°C" min={20} max={30} color="bg-orange-500" />
+            <SensorCard icon={Gauge} title="Air Pressure" value={sensorData.airPressure} unit="hPa" min={990} max={1030} color="bg-red-500" />
+            {/* Humidity moved here for better grouping */}
+            <SensorCard icon={Wind} title="Humidity" value={sensorData.humidity} unit="%" min={50} max={80} color="bg-sky-500" />
+          </div>
+        </div>
+        {/* END NEW AIR METRICS SECTION */}
+
         <div>
           <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">System Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
             <SensorCard icon={Waves} title="Water Level" value={Math.round(sensorData.waterLevel)} unit="%" min={70} max={100} color="bg-cyan-500" />
             <SensorCard icon={Gauge} title="Flow Rate" value={sensorData.waterFlow} unit="L/min" min={3} max={6} color="bg-indigo-500" />
-            <SensorCard icon={Wind} title="Humidity" value={sensorData.humidity} unit="%" min={50} max={80} color="bg-sky-500" />
             <SensorCard icon={Fish} title="Ammonia" value={sensorData.ammonia} unit="ppm" min={0} max={1} color="bg-orange-500" />
           </div>
         </div>
