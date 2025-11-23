@@ -1,16 +1,18 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+// Import Icon components
 import { Thermometer, Droplets, Activity, Zap, Waves, Gauge, Wind, Fish, ChevronDown, AlertTriangle, CheckCircle, Camera, Maximize2, Bell, X, Clock, Home, BarChart3, Settings, Sun } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-// --- UPDATED INTERFACES FOR SYNC ---
+// --- UPDATED INTERFACES ---
 interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
 interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
-interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; } // Must match SystemControls
+interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
 interface SensorCardProps { icon: React.ElementType; title: string; value: number; unit: string; min: number; max: number; color: string; }
-// UPDATED: Added airTemp and airPressure
+
+// SensorDataState includes Air Temp and Air Pressure
 interface SensorDataState {
   waterTemp: number;
   ph: number;
@@ -20,9 +22,10 @@ interface SensorDataState {
   humidity: number;
   ammonia: number;
   lightIntensity: number;
-  airTemp: number; // New: Air Temperature in °C
-  airPressure: number; // New: Air Pressure in hPa
+  airTemp: number; // Air Temperature in °C
+  airPressure: number; // Air Pressure in hPa
 }
+
 interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string; }
 interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
 
@@ -32,7 +35,7 @@ const ALERTS_DATA: AlertData[] = [
   { id: 3, type: "warning", severity: "medium", title: "Maintenance Due Soon", message: "Filter cleaning scheduled in 3 days.", time: "2 hours ago" },
 ]
 
-// UPDATED: Added initial values for airTemp and airPressure
+// INITIAL_SENSOR_DATA includes Air Temp and Air Pressure
 const INITIAL_SENSOR_DATA: SensorDataState = {
   waterTemp: 23.2,
   ph: 6.8,
@@ -42,11 +45,11 @@ const INITIAL_SENSOR_DATA: SensorDataState = {
   humidity: 65,
   ammonia: 0.3,
   lightIntensity: 15000,
-  airTemp: 25.5, // Initial Air Temp
-  airPressure: 1012.0 // Initial Air Pressure
+  airTemp: 25.5,
+  airPressure: 1012.0
 }
 
-// --- UPDATED INITIAL STATE FOR SYNC ---
+// --- INITIAL STATE & HOOKS (No changes here) ---
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
 const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 } }
 const localStorageKey = 'aquaponics_settings_state';
@@ -92,6 +95,8 @@ const getStatusColor = (status: ThresholdStatus): string => {
   }
 }
 const calculatePercentage = (value: number, min: number, max: number) => ((value - min) / (max - min)) * 100
+
+// --- COMPONENTS (Navbar, BottomNavigation, SensorCard, ControlToggle - No changes here) ---
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -167,19 +172,18 @@ const ControlToggle: React.FC<ControlToggleProps> = ({ label, icon: Icon, active
   </div>
 )
 
+// --- DASHBOARD COMPONENT ---
 export default function Dashboard() {
   const { controls, quickSaveControls } = useAquaponicsSettings()
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
   const [expandedAlert, setExpandedAlert] = useState<number | null>(null)
   const [showControlsModal, setShowControlsModal] = useState<boolean>(false)
   const [showCameraModal, setShowCameraModal] = useState<boolean>(false)
-  // Now using the full SystemControls/ControlState interface
   const [localControls, setLocalControls] = useState<ControlState>({ ...controls })
   const [sensorData, setSensorData] = useState<SensorDataState>(INITIAL_SENSOR_DATA)
   const alerts = ALERTS_DATA
 
   useEffect(() => {
-    // Ensure localControls has the latest controls, including growLight
     if (showControlsModal) setLocalControls({ ...controls })
   }, [showControlsModal, controls])
 
@@ -192,7 +196,7 @@ export default function Dashboard() {
         ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
         dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
         waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
-        // UPDATED: Mock data updates for new sensors
+        // Mock data updates for BME280 sensors
         airTemp: Number.parseFloat((24 + Math.random() * 3).toFixed(1)),
         airPressure: Number.parseFloat((1000 + Math.random() * 25).toFixed(1)),
       }))
@@ -201,7 +205,6 @@ export default function Dashboard() {
   }, [])
 
   const handleQuickControlsSave = () => {
-    // Save the full localControls state, which now includes growLight
     quickSaveControls({ ...localControls })
     setShowControlsModal(false)
   }
@@ -220,7 +223,6 @@ export default function Dashboard() {
             <ControlToggle label="DC Fan" icon={Wind} active={localControls.fan} onChange={val => handleLocalControlChange('fan', val)} />
             <ControlToggle label="pH Adjustment" icon={Droplets} active={localControls.phAdjustment} onChange={val => handleLocalControlChange('phAdjustment', val)} />
             <ControlToggle label="Aerator" icon={Activity} active={localControls.aerator} onChange={val => handleLocalControlChange('aerator', val)} />
-            {/* Add Grow Light here to enable quick access, since it's now in the state */}
             <ControlToggle label="Grow Light" icon={Sun} active={localControls.growLight} onChange={val => handleLocalControlChange('growLight', val)} />
           </div>
           <button onClick={handleQuickControlsSave} className="w-full mt-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-colors">Done</button>
@@ -341,7 +343,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* REVISED: Water-only Critical Metrics */}
+        {/* CRITICAL WATER METRICS */}
         <div>
           <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Water Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -352,7 +354,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* NEW: Environmental Metrics (Air Temp, Pressure, Humidity) */}
+        {/* ENVIRONMENTAL METRICS (BME280 outputs) */}
         <div>
           <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Environmental Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -362,7 +364,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* REVISED: System Metrics (Water Level, Flow, Ammonia) */}
+        {/* CORE SYSTEM METRICS (Flow, Level, Ammonia) */}
         <div>
           <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">System Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
