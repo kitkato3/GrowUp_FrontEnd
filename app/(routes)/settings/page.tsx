@@ -360,8 +360,8 @@ export default function SettingsPage() {
                 icon={Thermometer}
                 minValue={thresholds.waterTemp.min}
                 maxValue={thresholds.waterTemp.max}
-                minLimit={18}
-                maxLimit={30}
+                minLimit={22}
+                maxLimit={24}
                 onMinChange={(val) => handleThresholdChange('waterTemp', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('waterTemp', 'max', val)}
               />
@@ -371,8 +371,8 @@ export default function SettingsPage() {
                 icon={Droplets}
                 minValue={thresholds.ph.min}
                 maxValue={thresholds.ph.max}
-                minLimit={5}
-                maxLimit={9}
+                minLimit={6.5}
+                maxLimit={7.5}
                 onMinChange={(val) => handleThresholdChange('ph', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('ph', 'max', val)}
               />
@@ -382,7 +382,7 @@ export default function SettingsPage() {
                 icon={Activity}
                 minValue={thresholds.dissolvedO2.min}
                 maxValue={thresholds.dissolvedO2.max}
-                minLimit={3}
+                minLimit={5}
                 maxLimit={10}
                 onMinChange={(val) => handleThresholdChange('dissolvedO2', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('dissolvedO2', 'max', val)}
@@ -393,7 +393,7 @@ export default function SettingsPage() {
                 icon={AlertTriangle}
                 minValue={thresholds.ammonia.min}
                 maxValue={thresholds.ammonia.max}
-                minLimit={0}
+                minLimit={0.02}
                 maxLimit={2}
                 onMinChange={(val) => handleThresholdChange('ammonia', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('ammonia', 'max', val)}
