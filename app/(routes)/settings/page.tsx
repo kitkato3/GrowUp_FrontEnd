@@ -109,12 +109,6 @@ const useAquaponicsSettings = () => {
     setHasChanges, // Exported to be cleared manually if needed, but setters handle setting to true
   };
 };
-// --- END Custom Hook Logic ---
-
-
-// =================================================================
-// 🧩 Components (Retained from base code with minor adjustments)
-// =================================================================
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -253,9 +247,6 @@ const ThresholdRangeInput: React.FC<ThresholdRangeInputProps> = ({
   </div>
 )
 
-// =================================================================
-// ⚙️ MAIN SETTINGS COMPONENT (Updated Layout)
-// =================================================================
 export default function SettingsPage() {
   const {
     controls,

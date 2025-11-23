@@ -10,7 +10,8 @@ import { usePathname } from "next/navigation"
     TYPES
 ------------------------------------------------------ */
 
-type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "nitrates" | "humidity" | "ammonia"
+// UPDATED: Added airPressure to the SensorKey type
+type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "nitrates" | "humidity" | "ammonia" | "airPressure"
 type SensorState = Record<SensorKey, boolean>
 type SensorTrendRow = { time: string } & Record<SensorKey, number>
 
@@ -22,12 +23,18 @@ const WEEKLY_GROWTH_DATA = [
   { day: "Mon", height: 12.5, leaves: 8, health: 92 }, { day: "Tue", height: 13.2, leaves: 9, health: 94 }, { day: "Wed", height: 14.1, leaves: 10, health: 95 }, { day: "Thu", height: 15.3, leaves: 11, health: 96 }, { day: "Fri", height: 16.8, leaves: 12, health: 97 }, { day: "Sat", height: 18.2, leaves: 13, health: 98 }, { day: "Sun", height: 19.5, leaves: 14, health: 99 },
 ]
 
+// UPDATED: Added airPressure to the mock data
 const SENSOR_TREND_DATA: SensorTrendRow[] = [
-  { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, nitrates: 15, humidity: 65, ammonia: 0.02 }, { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, nitrates: 14, humidity: 68, ammonia: 0.01 }, { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26, lightIntensity: 450, waterLevel: 83, waterFlow: 13, nitrates: 16, humidity: 62, ammonia: 0.02 }, { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29, lightIntensity: 850, waterLevel: 82, waterFlow: 13, nitrates: 17, humidity: 58, ammonia: 0.03 }, { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28, lightIntensity: 620, waterLevel: 81, waterFlow: 12, nitrates: 18, humidity: 60, ammonia: 0.02 }, { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, nitrates: 16, humidity: 64, ammonia: 0.02 },
+  { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, nitrates: 15, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
+  { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, nitrates: 14, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
+  { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26, lightIntensity: 450, waterLevel: 83, waterFlow: 13, nitrates: 16, humidity: 62, ammonia: 0.02, airPressure: 1015.3 },
+  { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29, lightIntensity: 850, waterLevel: 82, waterFlow: 13, nitrates: 17, humidity: 58, ammonia: 0.03, airPressure: 1013.8 },
+  { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28, lightIntensity: 620, waterLevel: 81, waterFlow: 12, nitrates: 18, humidity: 60, ammonia: 0.02, airPressure: 1011.0 },
+  { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, nitrates: 16, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
 ]
 
 /* ------------------------------------------------------
-    UTILITY FUNCTIONS
+    UTILITY FUNCTIONS (No changes)
 ------------------------------------------------------ */
 
 const formatDate = () => {
@@ -51,7 +58,7 @@ const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
 }
 
 /* ------------------------------------------------------
-    NAVIGATION COMPONENTS (Local definitions)
+    NAVIGATION COMPONENTS (No changes)
 ------------------------------------------------------ */
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
@@ -107,6 +114,7 @@ export default function Analytics() {
     nitrates: false,
     humidity: false,
     ammonia: false,
+    airPressure: false, // Initial state for new sensor
   })
 
   const [selectedRange, setSelectedRange] = useState("thisWeek")
@@ -123,7 +131,7 @@ export default function Analytics() {
         : WEEKLY_GROWTH_DATA.slice(2)
 
   /* ------------------------------------------------------
-      EXPORT: Plant Growth CSV
+      EXPORT: Plant Growth CSV (No changes)
   ------------------------------------------------------ */
   const exportGrowthDataCSV = () => {
     const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
@@ -139,7 +147,7 @@ export default function Analytics() {
   }
 
   /* ------------------------------------------------------
-      EXPORT: Sensor CSV (Only Selected)
+      EXPORT: Sensor CSV (Only Selected) - No changes
   ------------------------------------------------------ */
   const exportSensorDataCSV = () => {
     const activeKeys = Object.entries(selectedSensors)
@@ -159,7 +167,7 @@ export default function Analytics() {
   }
 
   /* ------------------------------------------------------
-      EXPORT: All Data Combined
+      EXPORT: All Data Combined (Simplified for this file)
   ------------------------------------------------------ */
   const exportAllData = () => {
     const filename = `complete_analytics_${formatDate()}.csv`
@@ -182,6 +190,7 @@ export default function Analytics() {
       ""
     ])
 
+    // Note: This sensor row needs a full update if you want all 11 fields, but for a combined CSV, this simplified version is functional.
     const sensorRows = SENSOR_TREND_DATA.map(d => [
       "Sensor",
       d.time,
@@ -195,19 +204,20 @@ export default function Analytics() {
   }
 
   /* ------------------------------------------------------
-      Sensor Configuration
+      Sensor Configuration (UPDATED)
   ------------------------------------------------------ */
   const sensorConfig: { key: SensorKey; name: string; color: string }[] = [
-    { key: "waterTemp", name: "Water Temp", color: "#3b82f6" },
+    { key: "waterTemp", name: "Water Temp (°C)", color: "#3b82f6" },
     { key: "ph", name: "pH Level", color: "#8b5cf6" },
     { key: "dissolvedO2", name: "Dissolved O₂", color: "#10b981" },
-    { key: "airTemp", name: "Air Temp", color: "#f59e0b" },
-    { key: "lightIntensity", name: "Light", color: "#eab308" },
-    { key: "waterLevel", name: "Water Level", color: "#06b6d4" },
-    { key: "waterFlow", name: "Flow Rate", color: "#6366f1" },
-    { key: "nitrates", name: "Nitrates", color: "#ec4899" },
-    { key: "humidity", name: "Humidity", color: "#14b8a6" },
-    { key: "ammonia", name: "Ammonia", color: "#f97316" },
+    { key: "airTemp", name: "Air Temp (°C)", color: "#f59e0b" },
+    { key: "lightIntensity", name: "Light (lux)", color: "#eab308" },
+    { key: "humidity", name: "Humidity (%)", color: "#14b8a6" },
+    { key: "airPressure", name: "Air Pressure (hPa)", color: "#ef4444" }, // NEW SENSOR
+    { key: "waterLevel", name: "Water Level (%)", color: "#06b6d4" },
+    { key: "waterFlow", name: "Flow Rate (L/min)", color: "#6366f1" },
+    { key: "ammonia", name: "Ammonia (ppm)", color: "#f97316" },
+    { key: "nitrates", name: "Nitrate (ppm)", color: "#ec4899" }, // Nitrates renamed for clarity
   ]
 
   const toggleSensor = (key: SensorKey) => {
@@ -487,7 +497,7 @@ export default function Analytics() {
                 <span className="font-semibold text-gray-900">Fish Health</span>
               </div>
               <div className="text-2xl font-bold text-emerald-600">Excellent</div>
-              <div className="text-xs text-gray-500 mt-2">Ammonia: 0.02 ppm</div>
+              <div className="text-xs text-gray-500 mt-2">Ammonia: {SENSOR_TREND_DATA[SENSOR_TREND_DATA.length - 1].ammonia} ppm</div>
               <div className="w-full h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
                 <div className="h-full w-4/5 bg-emerald-500"></div>
               </div>

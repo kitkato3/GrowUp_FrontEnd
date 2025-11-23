@@ -6,7 +6,7 @@ import { Thermometer, Droplets, Activity, Zap, Waves, Gauge, Wind, Fish, Chevron
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-// --- INTERFACES (Kept the same for functionality) ---
+// --- INTERFACES  ---
 interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
 interface ThresholdState { waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number }; }
 interface ControlState { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
@@ -20,8 +20,8 @@ interface SensorDataState {
   humidity: number;
   ammonia: number;
   lightIntensity: number;
-  airTemp: number; // Air Temperature in °C
-  airPressure: number; // Air Pressure in hPa
+  airTemp: number;
+  airPressure: number;
 }
 interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string; }
 interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
@@ -45,7 +45,7 @@ const INITIAL_SENSOR_DATA: SensorDataState = {
   airPressure: 1012.0
 }
 
-// --- INITIAL STATE & HOOKS (No changes here) ---
+// --- INITIAL STATE & HOOKS ---
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
 const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 } }
 const localStorageKey = 'aquaponics_settings_state';
@@ -340,9 +340,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* REVISED CRITICAL WATER METRICS: Now includes Air Temp, Light Level moved out */}
+        {/*CRITICAL METRICS*/}
         <div>
-          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Water Metrics</h2>
+          <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">Critical Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
             {/* Water Temp, pH, DO, Air Temp are the most critical for immediate health */}
             <SensorCard icon={Thermometer} title="Water Temp" value={sensorData.waterTemp} unit="°C" min={20} max={26} color="bg-blue-500" />
@@ -352,7 +352,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* REVISED SYSTEM METRICS: Now includes Light Level, Humidity, and Air Pressure */}
+        {/* SYSTEM METRICS*/}
         <div>
           <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">System Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
