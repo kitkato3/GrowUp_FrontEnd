@@ -495,8 +495,8 @@ export default function SettingsPage() {
     lightIntensity: 1000.0,
   };
 
-  const currentAlerts = generateAlerts(mockSensorData, thresholds);
-  const systemStatus = checkSystemStatus(currentAlerts); // Output: 'Optimal' or 'Alerts Active'
+  const currentAlerts = generateAlerts(mockSensorData, thresholds); // Alerts based on fixed mock data
+  const systemStatus = checkSystemStatus(currentAlerts); // Status based on fixed mock alerts
 
   const [currentTime, setCurrentTime] = useState(new Date())
 

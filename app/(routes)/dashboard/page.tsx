@@ -242,8 +242,8 @@ export default function Dashboard() {
     lightIntensity: 1000.0, // Mocked value
   }
 
-  const dynamicAlerts = generateAlerts(minimalSensorData, thresholds as FullThresholdState);
-  const systemStatus = checkSystemStatus(dynamicAlerts);
+  const dynamicAlerts = generateAlerts(minimalSensorData, thresholds as FullThresholdState); // Alerts based on live data
+  const systemStatus = checkSystemStatus(dynamicAlerts); // Status based on live alerts
 
   // The original ALERTS_DATA is used here to match the image
   const alerts = ALERTS_DATA;
