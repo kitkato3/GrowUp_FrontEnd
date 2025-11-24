@@ -20,12 +20,30 @@ const WEEKLY_GROWTH_DATA: GrowthRow[] = [
 ]
 
 const SENSOR_TREND_DATA: SensorTrendRow[] = [
-  { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
-  { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
-  { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26, lightIntensity: 450, waterLevel: 83, waterFlow: 13, humidity: 62, ammonia: 0.02, airPressure: 1015.3 },
-  { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29, lightIntensity: 850, waterLevel: 82, waterFlow: 13, humidity: 58, ammonia: 0.03, airPressure: 1013.8 },
-  { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28, lightIntensity: 620, waterLevel: 81, waterFlow: 12, humidity: 60, ammonia: 0.02, airPressure: 1011.0 },
-  { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
+  { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24.0, lightIntensity: 0, waterLevel: 85, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
+  { time: "01:00", waterTemp: 22.3, ph: 6.8, dissolvedO2: 8.3, airTemp: 23.5, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 67, ammonia: 0.02, airPressure: 1013.0 },
+  { time: "02:00", waterTemp: 22.1, ph: 6.9, dissolvedO2: 8.4, airTemp: 23.0, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1013.5 },
+  { time: "03:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23.0, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
+  { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23.0, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
+  { time: "05:00", waterTemp: 22.3, ph: 6.9, dissolvedO2: 8.4, airTemp: 23.5, lightIntensity: 0, waterLevel: 83, waterFlow: 12, humidity: 67, ammonia: 0.02, airPressure: 1014.5 },
+  { time: "06:00", waterTemp: 22.6, ph: 7.0, dissolvedO2: 8.3, airTemp: 24.5, lightIntensity: 150, waterLevel: 83, waterFlow: 13, humidity: 65, ammonia: 0.02, airPressure: 1015.0 },
+  { time: "07:00", waterTemp: 22.9, ph: 7.0, dissolvedO2: 8.2, airTemp: 25.5, lightIntensity: 300, waterLevel: 83, waterFlow: 13, humidity: 63, ammonia: 0.02, airPressure: 1015.2 },
+  { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26.0, lightIntensity: 450, waterLevel: 83, waterFlow: 13, humidity: 62, ammonia: 0.02, airPressure: 1015.3 },
+  { time: "09:00", waterTemp: 23.5, ph: 7.0, dissolvedO2: 8.0, airTemp: 27.0, lightIntensity: 600, waterLevel: 82, waterFlow: 13, humidity: 60, ammonia: 0.02, airPressure: 1015.1 },
+  { time: "10:00", waterTemp: 23.9, ph: 7.1, dissolvedO2: 7.9, airTemp: 28.0, lightIntensity: 750, waterLevel: 82, waterFlow: 13, humidity: 59, ammonia: 0.03, airPressure: 1014.5 },
+  { time: "11:00", waterTemp: 24.2, ph: 7.1, dissolvedO2: 7.8, airTemp: 28.5, lightIntensity: 800, waterLevel: 82, waterFlow: 13, humidity: 58, ammonia: 0.03, airPressure: 1014.0 },
+  { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29.0, lightIntensity: 850, waterLevel: 82, waterFlow: 13, humidity: 58, ammonia: 0.03, airPressure: 1013.8 },
+  { time: "13:00", waterTemp: 24.8, ph: 7.1, dissolvedO2: 7.7, airTemp: 29.5, lightIntensity: 800, waterLevel: 81, waterFlow: 12, humidity: 57, ammonia: 0.03, airPressure: 1013.0 },
+  { time: "14:00", waterTemp: 25.0, ph: 7.1, dissolvedO2: 7.6, airTemp: 29.2, lightIntensity: 750, waterLevel: 81, waterFlow: 12, humidity: 58, ammonia: 0.03, airPressure: 1012.5 },
+  { time: "15:00", waterTemp: 24.9, ph: 7.0, dissolvedO2: 7.6, airTemp: 28.5, lightIntensity: 680, waterLevel: 81, waterFlow: 12, humidity: 59, ammonia: 0.03, airPressure: 1011.8 },
+  { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28.0, lightIntensity: 620, waterLevel: 81, waterFlow: 12, humidity: 60, ammonia: 0.02, airPressure: 1011.0 },
+  { time: "17:00", waterTemp: 24.5, ph: 7.0, dissolvedO2: 7.7, airTemp: 27.0, lightIntensity: 500, waterLevel: 81, waterFlow: 12, humidity: 62, ammonia: 0.02, airPressure: 1011.0 },
+  { time: "18:00", waterTemp: 24.1, ph: 6.9, dissolvedO2: 7.8, airTemp: 26.0, lightIntensity: 300, waterLevel: 82, waterFlow: 12, humidity: 63, ammonia: 0.02, airPressure: 1011.5 },
+  { time: "19:00", waterTemp: 23.8, ph: 6.9, dissolvedO2: 7.9, airTemp: 25.5, lightIntensity: 200, waterLevel: 82, waterFlow: 12, humidity: 64, ammonia: 0.02, airPressure: 1012.0 },
+  { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25.0, lightIntensity: 120, waterLevel: 82, waterFlow: 12, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
+  { time: "21:00", waterTemp: 23.2, ph: 6.8, dissolvedO2: 8.1, airTemp: 24.5, lightIntensity: 50, waterLevel: 83, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
+  { time: "22:00", waterTemp: 22.9, ph: 6.8, dissolvedO2: 8.1, airTemp: 24.2, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.8 },
+  { time: "23:00", waterTemp: 22.7, ph: 6.8, dissolvedO2: 8.2, airTemp: 24.1, lightIntensity: 0, waterLevel: 85, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
 ]
 
 /* SENSOR CONFIGURATION (Global, detailed version) */
@@ -643,6 +661,7 @@ export default function Analytics() {
                     dataKey="time"
                     stroke="#9ca3af"
                     tick={{ fill: "#6b7280", fontSize: 11 }}
+                    interval={3}
                   />
                   <YAxis
                     stroke="#9ca3af"
