@@ -106,10 +106,10 @@ const BottomNavigation = () => {
   );
 };
 
-/* NEW FEATURE: Sensor Readings Table Component */
+/* NEW FEATURE: Sensor Readings Table Component (Now displays ALL sensors) */
 const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestData }) => {
-  // Only display the first 6 most critical sensors in the table
-  const displayConfig = sensorConfig.slice(0, 6);
+  // *** MODIFIED: Removed slicing to include all sensors as requested by the user ***
+  const displayConfig = sensorConfig;
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
@@ -124,7 +124,6 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
             key={sensor.key}
             className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between"
           >
-            {/* Removing sensor module name from display for cleaner UI */}
             <span className="text-xs font-medium text-gray-700">{sensor.name.split('(')[0].trim()}</span>
             <span className="text-sm font-bold" style={{ color: sensor.color }}>
               {sensor.format(latestData[sensor.key])} {sensor.unit}
@@ -132,7 +131,6 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
           </div>
         ))}
       </div>
-      <p className="text-xs text-gray-500 mt-3 text-center">Tap "Sensor Trends" below for full list & history.</p>
     </div>
   );
 };
@@ -297,7 +295,7 @@ export default function Analytics() {
 
         <div className="space-y-5">
 
-          {/* 1. Live Sensor Readings Table */}
+          {/* 1. Live Sensor Readings Table (Now includes ALL sensors) */}
           <SensorReadingsTable latestData={latestSensorReading} />
 
           {/* EXPORT ALL BUTTON */}
