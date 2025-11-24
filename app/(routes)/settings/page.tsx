@@ -89,6 +89,7 @@ const localStorageKey = 'aquaponics_settings_state';
 // Convert time to human-readable
 const timeAgo = (date: Date) => {
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+
   if (seconds < 60) return "Just now"
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes} min ago`
@@ -96,13 +97,19 @@ const timeAgo = (date: Date) => {
   return `${hours} hrs ago`
 }
 
+// Generate alerts based on live sensor values
 const generateAlerts = (
   sensor: SensorDataState,
-  thresholds: ThresholdState
+  // Kailangan nating i-include ang lahat ng bagong threshold keys dito
+  thresholds: ThresholdState & {
+    waterFlow?: { min: number; max: number };
+    airHumidity?: { min: number; max: number };
+    lightIntensity?: { min: number; max: number };
+  }
 ): AlertData[] => {
   const now = new Date()
   const alerts: AlertData[] = []
-  let alertId = 10;
+  let alertId = 10; // Start ID from 10, following existing IDs 1-9
 
   // --- Water Temperature (EXISTING) ---
   if (sensor.waterTemp < thresholds.waterTemp.min) {
@@ -495,8 +502,8 @@ export default function SettingsPage() {
     lightIntensity: 1000.0,
   };
 
-  const currentAlerts = generateAlerts(mockSensorData, thresholds); // Alerts based on fixed mock data
-  const systemStatus = checkSystemStatus(currentAlerts); // Status based on fixed mock alerts
+  const currentAlerts = generateAlerts(mockSensorData, thresholds);
+  const systemStatus = checkSystemStatus(currentAlerts); // Output: 'Optimal' or 'Alerts Active'
 
   const [currentTime, setCurrentTime] = useState(new Date())
 
