@@ -92,7 +92,7 @@ const getStatusColor = (status: ThresholdStatus): string => {
 }
 const calculatePercentage = (value: number, min: number, max: number) => ((value - min) / (max - min)) * 100
 
-// --- COMPONENTS (Navbar, BottomNavigation, SensorCard, ControlToggle - No changes here) ---
+// --- COMPONENTS (Navbar, BottomNavigation, SensorCard, ControlToggle) ---
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -192,7 +192,6 @@ export default function Dashboard() {
         ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
         dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
         waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
-        // Mock data updates for BME280 sensors
         airTemp: Number.parseFloat((24 + Math.random() * 3).toFixed(1)),
         airPressure: Number.parseFloat((1000 + Math.random() * 25).toFixed(1)),
         humidity: Number.parseFloat((60 + Math.random() * 10).toFixed(1)),
@@ -348,7 +347,7 @@ export default function Dashboard() {
             <SensorCard icon={Thermometer} title="Water Temp" value={sensorData.waterTemp} unit="°C" min={20} max={26} color="bg-blue-500" />
             <SensorCard icon={Droplets} title="pH Level" value={sensorData.ph} unit="" min={6.5} max={7.5} color="bg-purple-500" />
             <SensorCard icon={Activity} title="Dissolved O₂" value={sensorData.dissolvedO2} unit="mg/L" min={5} max={8} color="bg-green-500" />
-            <SensorCard icon={Thermometer} title="Air Temp" value={sensorData.airTemp} unit="°C" min={20} max={30} color="bg-orange-500" />
+            <SensorCard icon={Fish} title="Ammonia" value={sensorData.ammonia} unit="ppm" min={0} max={1} color="bg-orange-500" />
           </div>
         </div>
 
@@ -356,17 +355,12 @@ export default function Dashboard() {
         <div>
           <h2 className="text-sm font-bold text-gray-900 mb-3 px-1">System Metrics</h2>
           <div className="grid grid-cols-2 gap-3">
-            {/* Water Mechanical */}
             <SensorCard icon={Waves} title="Water Level" value={Math.round(sensorData.waterLevel)} unit="%" min={70} max={100} color="bg-cyan-500" />
             <SensorCard icon={Gauge} title="Flow Rate" value={sensorData.waterFlow} unit="L/min" min={3} max={6} color="bg-indigo-500" />
-
-            {/* Chemistry & Environmental Inputs */}
-            <SensorCard icon={Fish} title="Ammonia" value={sensorData.ammonia} unit="ppm" min={0} max={1} color="bg-orange-500" />
             <SensorCard icon={Zap} title="Light Level" value={sensorData.lightIntensity} unit="lux" min={10000} max={20000} color="bg-yellow-500" />
-
-            {/* Air Environmental */}
             <SensorCard icon={Wind} title="Humidity" value={sensorData.humidity} unit="%" min={50} max={80} color="bg-sky-500" />
             <SensorCard icon={Gauge} title="Air Pressure" value={sensorData.airPressure} unit="hPa" min={990} max={1030} color="bg-red-500" />
+            <SensorCard icon={Thermometer} title="Air Temp" value={sensorData.airTemp} unit="°C" min={20} max={30} color="bg-orange-500" />
           </div>
         </div>
       </div>
