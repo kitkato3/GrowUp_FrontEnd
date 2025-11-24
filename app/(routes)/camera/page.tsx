@@ -79,7 +79,6 @@ const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     );
 };
 
-// --- NAVIGATION COMPONENTS (Local definitions) ---
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
     <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
         <span className="font-bold text-gray-900">GROWUP</span>
@@ -125,11 +124,9 @@ export default function App() {
     const [showSettings, setShowSettings] = useState<boolean>(false)
     const [showGallery, setShowGallery] = useState<boolean>(false)
     const [selectedSnapshot, setSelectedSnapshot] = useState<Snapshot | null>(null)
-
-    // State for new features
     const [isRecording, setIsRecording] = useState<boolean>(false);
     const [recordingDuration, setRecordingDuration] = useState<number>(0);
-    const [zoomLevel, setZoomLevel] = useState<number>(1.0); // 1.0 (1x) to 4.0 (4x)
+    const [zoomLevel, setZoomLevel] = useState<number>(1.0);
     const [showZoomControls, setShowZoomControls] = useState<boolean>(false);
 
     const [settings, setSettings] = useState<SettingsState>({
@@ -150,19 +147,16 @@ export default function App() {
         setTimeout(() => { setToast(prev => ({ ...prev, visible: false })); }, 3000);
     }, []);
 
-    // Clock update effect
     useEffect(() => {
         const interval = setInterval(() => { setCurrentTime(new Date()) }, 1000)
         return () => clearInterval(interval)
     }, [])
 
-    // Recording timer effect
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isRecording) {
             interval = setInterval(() => { setRecordingDuration(prevDuration => prevDuration + 1); }, 1000);
         } else if (!isRecording && recordingDuration > 0) {
-            // Logic to simulate video saving after stopping
             if (recordingDuration >= 3) {
                 simulateDownloadFn('video/mp4', `kale_video_${new Date().toISOString()}.mp4`, 'Recorded Video', recordingDuration);
             } else if (recordingDuration > 0) {
@@ -183,25 +177,19 @@ export default function App() {
         if (selectedSnapshot) {
             handleGalleryDownload(selectedSnapshot);
         } else {
-            // Placeholder: If button is accidentally visible outside of modal
             showToast("Error: No snapshot selected for download.", 'warning');
         }
     }
 
-    // FUNCTIONALITY REMOVED: handleSnapshot (Removed saving from main Action Center)
     const handleSnapshot = (): void => {
-        // Instead of saving, this button will now just open the gallery, if desired, 
-        // but for simplicity, we'll keep the Gallery button separate.
         showToast("Use the Gallery button to view and download snapshots.", 'info');
     }
 
     const handleRecord = (): void => {
         if (isRecording) {
-            // Stop recording
             setIsRecording(false);
         } else {
-            // Start recording
-            setRecordingDuration(0); // Reset duration before starting
+            setRecordingDuration(0);
             setIsRecording(true);
             showToast("🎥 Recording started! Click the button again to stop.", 'info');
         }
@@ -243,7 +231,7 @@ export default function App() {
 
             <div className="space-y-5 pb-24 px-4 py-5">
                 <h1 className="text-3xl font-extrabold text-gray-800 pt-2">
-                    Hydroponic Camera Monitor
+                    Camera Monitor
                 </h1>
                 <p className="text-gray-500 -mt-3">Real-time surveillance and health analysis for your Kale Tower.</p>
 
@@ -344,7 +332,6 @@ export default function App() {
                     </h3>
                     <div className="grid grid-cols-2 gap-3">
                         <button
-                            // Removed handleSnapshot, button now opens Gallery directly
                             onClick={() => setShowGallery(true)}
                             className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                         >
@@ -435,7 +422,6 @@ export default function App() {
                                     <h3 className="text-2xl font-bold text-gray-900 mb-2">Snapshot - {selectedSnapshot.date}</h3>
                                     <p className="text-gray-500 mb-4">Captured at {selectedSnapshot.time}</p>
                                     <div className="grid grid-cols-2 gap-3">
-                                        {/* CRITICAL FIX: handleDownload now performs the file saving logic */}
                                         <button onClick={() => handleGalleryDownload(selectedSnapshot)} className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Download className="w-5 h-5" />Download</button>
                                         <button onClick={handleDelete} className="p-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Trash2 className="w-5 h-5" />Delete</button>
                                     </div>
