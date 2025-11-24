@@ -242,7 +242,16 @@ const generateAlerts = (
   // Return only alerts that triggered
   return alerts
 }
-
+/**
+ * Checks overall system status based on generated alerts.
+ * If alert list is empty, the system is running optimally.
+ */
+const checkSystemStatus = (alerts: AlertData[]): 'Optimal' | 'Alerts Active' => {
+  if (alerts.length === 0) {
+    return 'Optimal';
+  }
+  return 'Alerts Active';
+};
 /**
  * Synchronously loads state from localStorage.
  */
@@ -495,6 +504,21 @@ export default function SettingsPage() {
     handleSave,
     hasChanges,
   } = useAquaponicsSettings();
+
+  const mockSensorData: SensorDataState = {
+    waterTemp: 24.0,
+    ph: 7.0,
+    dissolvedO2: 6.5,
+    ammonia: 0.1,
+    airTemp: 25.0,
+    waterFlow: 10.0,
+    airHumidity: 60.0,
+    chemLevel: 80.0,
+    lightIntensity: 1000.0,
+  };
+
+  const currentAlerts = generateAlerts(mockSensorData, thresholds);
+  const systemStatus = checkSystemStatus(currentAlerts); // Output: 'Optimal' or 'Alerts Active'
 
   const [currentTime, setCurrentTime] = useState(new Date())
 
