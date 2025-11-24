@@ -258,17 +258,32 @@ export default function Analytics() {
     }
 
     setDateWarning(currentWarning);
+
+    if (currentWarning === "") {
+      if (type === 'growth') {
+        setSelectedRange('customGrowth');
+      } else {
+        setSensorExportRange('custom');
+      }
+    }
   };
 
   // Define data variables here so they are in scope
-  const filteredGrowthData =
-    selectedRange === "thisWeek"
-      ? WEEKLY_GROWTH_DATA
-      : selectedRange === "lastWeek"
-        ? WEEKLY_GROWTH_DATA.slice(1)
-        : selectedRange === "twoWeeks"
-          ? WEEKLY_GROWTH_DATA.slice(0, 5) // Mocking 'twoWeeks' to contain some data
-          : WEEKLY_GROWTH_DATA // Fallback for custom ranges which use mock data anyway
+  const filteredGrowthData = (() => {
+    if (selectedRange === 'customGrowth') {
+      return WEEKLY_GROWTH_DATA.slice(0, 3);
+    }
+
+    switch (selectedRange) {
+      case "lastWeek":
+        return WEEKLY_GROWTH_DATA.slice(1);
+      case "twoWeeks":
+        return WEEKLY_GROWTH_DATA.slice(0, 5);
+      case "thisWeek":
+      default:
+        return WEEKLY_GROWTH_DATA;
+    }
+  })();
 
   const filteredSensorData = (() => {
     switch (sensorExportRange) {
@@ -277,12 +292,13 @@ export default function Analytics() {
       case '7d':
         return SENSOR_TREND_DATA.filter((_, index) => index % 4 === 0).slice(0, 7);
       case 'custom':
-        return SENSOR_TREND_DATA;
+        return SENSOR_TREND_DATA.slice(4);
       case '24h':
       default:
         return SENSOR_TREND_DATA
     }
   })();
+
   const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
 
   const activeCount = Object.values(selectedSensors).filter(Boolean).length
