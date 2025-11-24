@@ -659,17 +659,17 @@ export default function Analytics() {
   const VIEWS_CONFIG = {
     'dashboard': {
       title: 'Home Dashboard',
-      subtitle: 'This is the main screen for quick system status overview.',
+      subtitle: 'This view provides quick status updates. Full implementation is available in the main Analytics tab.',
       icon: <Home className="w-16 h-16 text-emerald-500" />
     },
     'camera': {
       title: 'Camera Feed & Controls',
-      subtitle: 'Access live video and take snapshots of your growing system.',
+      subtitle: 'Live video access is simulated here. Full controls are available in the main Analytics tab.',
       icon: <Camera className="w-16 h-16 text-blue-500" />
     },
     'settings': {
       title: 'System Settings',
-      subtitle: 'Configure alerts, sensor calibration, and environment controls.',
+      subtitle: 'Configuration options are simulated here. Please use the Analytics tab for functional data interaction.',
       icon: <Settings className="w-16 h-16 text-orange-500" />
     },
     'analytics': {
