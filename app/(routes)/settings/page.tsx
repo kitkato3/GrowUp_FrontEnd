@@ -606,9 +606,7 @@ export default function SettingsPage() {
     setThresholds(newThresholds);
   }
 
-  // 🌟 MODIFIED FOR INP FIX 🌟
   const handleSaveChanges = async () => {
-    // Await the asynchronous handleSave (which uses setTimeout(..., 0) internally)
     const success = await handleSave();
 
     if (success) {
@@ -635,6 +633,11 @@ export default function SettingsPage() {
       <div className="px-4 py-5 pb-24">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <div className={`mt-2 p-2 rounded-lg font-semibold flex items-center gap-2 ${systemStatus === 'Optimal' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
+            }`}>
+            {systemStatus === 'Optimal' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+            <span>System Status: **{systemStatus}**</span>
+          </div>
           <p className="text-gray-600 mt-1">Configure your aquaponics system</p>
         </div>
 
