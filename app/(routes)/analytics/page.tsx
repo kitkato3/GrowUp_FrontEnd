@@ -6,7 +6,8 @@ import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, Bar
 // Removed: import Link from "next/link"
 // Removed: import { usePathname } from "next/navigation"
 
-type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "nitrates" | "humidity" | "ammonia" | "airPressure"
+// UPDATED: Removed "nitrates" from SensorKey
+type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "humidity" | "ammonia" | "airPressure"
 type SensorState = Record<SensorKey, boolean>
 type SensorTrendRow = { time: string } & Record<SensorKey, number>
 
@@ -15,17 +16,18 @@ const WEEKLY_GROWTH_DATA = [
   { day: "Mon", height: 12.5, leaves: 8, health: 92 }, { day: "Tue", height: 13.2, leaves: 9, health: 94 }, { day: "Wed", height: 14.1, leaves: 10, health: 95 }, { day: "Thu", height: 15.3, leaves: 11, health: 96 }, { day: "Fri", height: 16.8, leaves: 12, health: 97 }, { day: "Sat", height: 18.2, leaves: 13, health: 98 }, { day: "Sun", height: 19.5, leaves: 14, health: 99 },
 ]
 
-
+// UPDATED: Removed 'nitrates' data field from all rows
 const SENSOR_TREND_DATA: SensorTrendRow[] = [
-  { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, nitrates: 15, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
-  { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, nitrates: 14, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
-  { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26, lightIntensity: 450, waterLevel: 83, waterFlow: 13, nitrates: 16, humidity: 62, ammonia: 0.02, airPressure: 1015.3 },
-  { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29, lightIntensity: 850, waterLevel: 82, waterFlow: 13, nitrates: 17, humidity: 58, ammonia: 0.03, airPressure: 1013.8 },
-  { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28, lightIntensity: 620, waterLevel: 81, waterFlow: 12, nitrates: 18, humidity: 60, ammonia: 0.02, airPressure: 1011.0 },
-  { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, nitrates: 16, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
+  { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
+  { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
+  { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26, lightIntensity: 450, waterLevel: 83, waterFlow: 13, humidity: 62, ammonia: 0.02, airPressure: 1015.3 },
+  { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29, lightIntensity: 850, waterLevel: 82, waterFlow: 13, humidity: 58, ammonia: 0.03, airPressure: 1013.8 },
+  { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28, lightIntensity: 620, waterLevel: 81, waterFlow: 12, humidity: 60, ammonia: 0.02, airPressure: 1011.0 },
+  { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
 ]
 
 /* SENSOR CONFIGURATION (UPDATED) */
+// UPDATED: Removed Nitrate entry
 const sensorConfig: { key: SensorKey; name: string; color: string; unit: string; format: (val: number) => string }[] = [
   { key: "waterTemp", name: "Water Temp (DS18B20)", color: "#3b82f6", unit: "°C", format: (v) => v.toFixed(1) },
   { key: "ph", name: "pH Level (PH4502C)", color: "#8b5cf6", unit: "", format: (v) => v.toFixed(1) },
@@ -37,7 +39,6 @@ const sensorConfig: { key: SensorKey; name: string; color: string; unit: string;
   { key: "waterLevel", name: "Water Level (HC SR04)", color: "#06b6d4", unit: "%", format: (v) => v.toFixed(0) },
   { key: "waterFlow", name: "Flow Rate (YF-S201)", color: "#6366f1", unit: "L/min", format: (v) => v.toFixed(0) },
   { key: "ammonia", name: "Ammonia (MQ137)", color: "#f97316", unit: "ppm", format: (v) => v.toFixed(2) },
-  { key: "nitrates", name: "Nitrate (Mock)", color: "#ec4899", unit: "ppm", format: (v) => v.toFixed(0) }, // Mocked sensor (not listed by user)
 ]
 
 /* UTILITY FUNCTIONS */
@@ -108,7 +109,7 @@ const BottomNavigation = () => {
 
 /* NEW FEATURE: Sensor Readings Table Component (Now displays ALL sensors) */
 const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestData }) => {
-  // *** MODIFIED: Removed slicing to include all sensors as requested by the user ***
+  // Removed slicing to include all sensors as requested by the user
   const displayConfig = sensorConfig;
 
   return (
@@ -124,6 +125,7 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
             key={sensor.key}
             className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between"
           >
+            {/* Removing sensor module name from display for cleaner UI */}
             <span className="text-xs font-medium text-gray-700">{sensor.name.split('(')[0].trim()}</span>
             <span className="text-sm font-bold" style={{ color: sensor.color }}>
               {sensor.format(latestData[sensor.key])} {sensor.unit}
@@ -131,6 +133,7 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
           </div>
         ))}
       </div>
+      <p className="text-xs text-gray-500 mt-3 text-center">Tap "Sensor Trends" below for full list & history.</p>
     </div>
   );
 };
@@ -147,11 +150,11 @@ export default function Analytics() {
     lightIntensity: false,
     waterLevel: false,
     waterFlow: false,
-    nitrates: false,
+    // UPDATED: Removed nitrates: false,
     humidity: false,
     ammonia: false,
     airPressure: false,
-  })
+  } as SensorState) // Casting to SensorState now that 'nitrates' is removed
 
   // selectedRange now controls both chart display and export range for growth
   const [selectedRange, setSelectedRange] = useState("thisWeek")
@@ -159,6 +162,62 @@ export default function Analytics() {
   const [currentTime, setCurrentTime] = useState(new Date())
   // NEW STATE for Custom Export Range
   const [sensorExportRange, setSensorExportRange] = useState("24h")
+
+  // NEW STATES for Custom Range Dates
+  const [customGrowthStartDate, setCustomGrowthStartDate] = useState(formatDate());
+  const [customGrowthEndDate, setCustomGrowthEndDate] = useState(formatDate());
+  const [customSensorStartDate, setCustomSensorStartDate] = useState(formatDate());
+  const [customSensorEndDate, setCustomSensorEndDate] = useState(formatDate());
+  const [dateWarning, setDateWarning] = useState("");
+
+  // Helper function to calculate date difference
+  const getDaysDifference = (start: string, end: string) => {
+    const oneDay = 24 * 60 * 60 * 1000;
+    const firstDate = new Date(start);
+    const secondDate = new Date(end);
+    return Math.abs(Math.round((firstDate.getTime() - secondDate.getTime()) / oneDay));
+  };
+
+  const handleDateChange = (type: 'growth' | 'sensor', key: 'start' | 'end', value: string) => {
+    let start, end;
+
+    if (type === 'growth') {
+      if (key === 'start') {
+        start = value;
+        end = customGrowthEndDate;
+        setCustomGrowthStartDate(value);
+      } else {
+        start = customGrowthStartDate;
+        end = value;
+        setCustomGrowthEndDate(value);
+      }
+    } else { // sensor
+      if (key === 'start') {
+        start = value;
+        end = customSensorEndDate;
+        setCustomSensorStartDate(value);
+      } else {
+        start = customSensorStartDate;
+        end = value;
+        setCustomSensorEndDate(value);
+      }
+    }
+
+    let currentWarning = "";
+
+    // Check if start is before end
+    if (new Date(start) > new Date(end)) {
+      currentWarning = "Start date cannot be after the end date.";
+    }
+
+    // Check 7-day limit
+    const daysDiff = getDaysDifference(start, end);
+    if (daysDiff > 7 && currentWarning === "") {
+      currentWarning = `Maximum range is 7 days. You selected ${daysDiff} days.`;
+    }
+
+    setDateWarning(currentWarning);
+  };
 
 
   /* Filter Growth Data (Updated to treat 'customGrowth' as default mock data) */
@@ -171,12 +230,18 @@ export default function Analytics() {
 
   /* EXPORT: Plant Growth CSV (Updated to use selectedRange for filename) */
   const exportGrowthDataCSV = () => {
-    // Use selectedRange (including 'customGrowth') for filename
-    const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
-    const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"]
+    let filename = `plant_growth_${selectedRange}_${formatDate()}.csv`;
 
-    // In a real system, the backend would use `selectedRange` to fetch the specific data.
-    // Here, we export the data currently visible on the chart.
+    if (selectedRange === "customGrowth") {
+      if (dateWarning) {
+        // Using a mock confirmation/alert to inform user about the validation error
+        alert(`Cannot export: Please fix the date range issue first. Error: ${dateWarning}`);
+        return;
+      }
+      filename = `plant_growth_${customGrowthStartDate}_to_${customGrowthEndDate}.csv`;
+    }
+
+    const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"]
     const rows = filteredGrowthData.map((d) => [
       d.day,
       d.height,
@@ -187,27 +252,36 @@ export default function Analytics() {
     downloadCSV(filename, headers, rows)
   }
 
-  /* UPDATED: EXPORT Sensor CSV (Handles Export Range) */
+  /* UPDATED: EXPORT Sensor CSV (Handles Export Range and Custom Dates) */
   const exportSensorDataCSV = () => {
+    if (sensorExportRange === "custom" && dateWarning) {
+      alert(`Cannot export: Please fix the date range issue first. Error: ${dateWarning}`);
+      return;
+    }
+
     const activeKeys = Object.entries(selectedSensors)
       .filter(([_, isActive]) => isActive)
       .map(([key]) => key as SensorKey)
 
-    const filename = `sensor_data_${sensorExportRange}_${formatDate()}.csv`
+    let filename = `sensor_data_${sensorExportRange}_${formatDate()}.csv`;
+
+    if (sensorExportRange === "custom") {
+      filename = `sensor_data_${customSensorStartDate}_to_${customSensorEndDate}.csv`;
+    }
+
     const headers = ["Time", ...activeKeys.map(k =>
       sensorConfig.find(s => s.key === k)?.name || k
     )]
 
-    // Mock data filtering based on sensorExportRange (currently SENSOR_TREND_DATA is 24h mock)
+    // Mock data filtering based on sensorExportRange (still using the same mock logic)
     let exportedData = SENSOR_TREND_DATA;
     if (sensorExportRange === "48h") {
       // Mocking double the data for 48h export
       exportedData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA.map(d => ({ ...d, time: `Day2 ${d.time}` }))];
-    } else if (sensorExportRange === "7d") {
+    } else if (sensorExportRange === "7d" || sensorExportRange === "custom") {
       // Mocking a long list of data for 7 days
       exportedData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
     }
-
 
     const rows = exportedData.map((entry) => [
       entry.time,
@@ -342,7 +416,7 @@ export default function Analytics() {
               </div>
             </div>
 
-            {/* Filter Dropdown (Updated with Custom Range) */}
+            {/* Filter Dropdown (Updated with Custom Range Date Pickers) */}
             {showFilters && (
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 block mb-2">
@@ -352,14 +426,39 @@ export default function Analytics() {
                 <select
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   value={selectedRange}
-                  onChange={(e) => setSelectedRange(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedRange(e.target.value);
+                    // Clear warning when switching out of custom mode
+                    if (e.target.value !== "customGrowth") {
+                      setDateWarning("");
+                    }
+                  }}
                 >
                   <option value="thisWeek">This Week</option>
                   <option value="lastWeek">Last Week</option>
                   <option value="twoWeeks">Last 2 Weeks</option>
                   {/* NEW OPTION */}
-                  <option value="customGrowth">Custom Range (Mock)</option>
+                  <option value="customGrowth">Custom Range</option>
                 </select>
+
+                {selectedRange === "customGrowth" && (
+                  <div className="mt-3 space-y-2">
+                    <p className="text-xs font-semibold text-gray-700">Select Date Range (Max 7 Days)</p>
+                    <input
+                      type="date"
+                      value={customGrowthStartDate}
+                      onChange={(e) => handleDateChange('growth', 'start', e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    <input
+                      type="date"
+                      value={customGrowthEndDate}
+                      onChange={(e) => handleDateChange('growth', 'end', e.target.value)}
+                      className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                    />
+                    {selectedRange === "customGrowth" && dateWarning && <p className="text-xs text-red-600 font-medium">{dateWarning}</p>}
+                  </div>
+                )}
               </div>
             )}
 
@@ -432,12 +531,17 @@ export default function Analytics() {
                 <select
                   className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
                   value={sensorExportRange}
-                  onChange={(e) => setSensorExportRange(e.target.value)}
+                  onChange={(e) => {
+                    setSensorExportRange(e.target.value);
+                    if (e.target.value !== "custom") {
+                      setDateWarning("");
+                    }
+                  }}
                 >
                   <option value="24h">Last 24 Hours</option>
                   <option value="48h">Last 48 Hours</option>
                   <option value="7d">Last 7 Days</option>
-                  <option value="custom">Custom Range (Mock)</option>
+                  <option value="custom">Custom Range</option>
                 </select>
 
                 <button
@@ -445,10 +549,32 @@ export default function Analytics() {
                   className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-medium"
                 >
                   <Download className="w-3.5 h-3.5" />
-                  Export CSV
+                  Export
                 </button>
               </div>
             </div>
+
+            {/* Custom Range Date Pickers for Sensor Data */}
+            {sensorExportRange === "custom" && (
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-xs font-semibold text-gray-700 mb-2">Select Date Range (Max 7 Days)</p>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={customSensorStartDate}
+                    onChange={(e) => handleDateChange('sensor', 'start', e.target.value)}
+                    className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
+                  />
+                  <input
+                    type="date"
+                    value={customSensorEndDate}
+                    onChange={(e) => handleDateChange('sensor', 'end', e.target.value)}
+                    className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
+                  />
+                </div>
+                {sensorExportRange === "custom" && dateWarning && <p className="text-xs text-red-600 font-medium mt-2">{dateWarning}</p>}
+              </div>
+            )}
 
             <h4 className="font-semibold text-gray-700 text-sm mb-3">24-Hour Sensor Trends ({activeCount} selected)</h4>
 
@@ -529,7 +655,7 @@ export default function Analytics() {
                         stroke={sensor.color}
                         strokeWidth={2.5}
                         dot={false}
-                        name={sensor.name.split('(')[0].trim()} // Clean name for legend
+                        name={sensor.name.split('(')[0].trim()}
                         activeDot={{ r: 5 }}
                       />
                     )
