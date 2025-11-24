@@ -503,7 +503,8 @@ export default function SettingsPage() {
   };
 
   const currentAlerts = generateAlerts(mockSensorData, thresholds);
-  const systemStatus = checkSystemStatus(currentAlerts); // Output: 'Optimal' or 'Alerts Active'
+  // Ang variable na 'systemStatus' ay hindi na ginagamit sa JSX, pero kailangan pa rin ito para sa 'currentAlerts' logic.
+  const systemStatus = checkSystemStatus(currentAlerts);
 
   const [currentTime, setCurrentTime] = useState(new Date())
 
@@ -615,11 +616,6 @@ export default function SettingsPage() {
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
           <p className="text-gray-600 mt-1">Configure your aquaponics system</p>
-          <div className={`mt-2 p-2 rounded-lg font-semibold flex items-center gap-2 ${systemStatus === 'Optimal' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-            }`}>
-            {systemStatus === 'Optimal' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-            <span>System Status: {systemStatus}</span>
-          </div>
         </div>
 
         <div className="space-y-5">
