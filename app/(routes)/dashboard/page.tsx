@@ -367,12 +367,6 @@ export default function Dashboard() {
                 <div className="text-sm font-semibold">Live Feed</div>
               </div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-              <div className={`p-4 font-semibold flex items-center gap-2 ${systemStatus === 'Optimal' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                {systemStatus === 'Optimal' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
-                <span>System Status: {systemStatus}</span>
-              </div>
-            </div>
             <div className="absolute top-3 right-3 bg-red-500 w-3 h-3 rounded-full animate-pulse"></div>
             <div className="absolute bottom-3 left-3 bg-black/60 px-2.5 py-1.5 rounded text-white text-xs font-mono">{currentTime.toLocaleTimeString()}</div>
             <button onClick={() => setShowCameraModal(true)} className="absolute bottom-3 right-3 bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
@@ -380,6 +374,15 @@ export default function Dashboard() {
             </button>
           </div>
         </div>
+
+        {/* FIXED: DITO NA ANG SYSTEM STATUS CARD */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className={`p-4 font-semibold flex items-center gap-2 ${systemStatus === 'Optimal' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+            {systemStatus === 'Optimal' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+            <span>System Status: {systemStatus}</span>
+          </div>
+        </div>
+
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
