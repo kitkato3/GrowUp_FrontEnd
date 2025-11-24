@@ -291,7 +291,7 @@ export default function Analytics() {
     }
   })();
 
-  // Ang SENSOR_TREND_DATA ay may 24 entries (00:00, 01:00, ..., 23:00)
+  // SENSOR_TREND_DATA has 24 entries (00:00, 01:00, ..., 23:00)
   const filteredSensorData = (() => {
 
     // Helper function to create new data with adjusted time/index
@@ -299,17 +299,18 @@ export default function Analytics() {
       return data
         .filter((_, index) => index % step === 0) // Optional downsampling
         .map((entry, index) => {
-          // Calculate time based on the index to show difference in duration
-          let hour = (startIndex + index) % 24;
-          let minute = 0;
-          let timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
 
-          // For 48h and 7d, we'll prefix the day/cycle
+          // Original time calculation (not used for 48h/7d)
+          let timeString = entry.time;
+
+          // Logic to prefix Day/Cycle for clarity in CSV export
           if (sensorExportRange === '48h') {
-            const dayCycle = Math.floor(index / SENSOR_TREND_DATA.length) + 1;
+            // FIX: Day 1 (1-24), Day 2 (25-48). Use 24 as the cycle length.
+            const dayCycle = Math.floor(index / 24) + 1;
             timeString = `Day ${dayCycle} - ${entry.time}`;
           } else if (sensorExportRange === '7d') {
-            const dayCycle = index + 1;
+            // FIX: Day 1 (1-24), Day 2 (25-48), ... Day 7 (145-168)
+            const dayCycle = Math.floor(index / 24) + 1;
             timeString = `Day ${dayCycle} - ${entry.time}`;
           }
 
@@ -327,18 +328,22 @@ export default function Analytics() {
 
     switch (sensorExportRange) {
       case '48h':
+        // Create 48 entries (2 x 24h data)
         const full48hData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
         return mapDataWithNewTime(full48hData, 0);
 
       case '7d':
-        const daySummaryData = SENSOR_TREND_DATA.filter((_, index) => index % 4 === 0).slice(0, 7);
-        return mapDataWithNewTime(daySummaryData, 0);
+        // Create 168 entries (7 days x 24 hours)
+        const full7dData = Array(7).fill(SENSOR_TREND_DATA).flat();
+        return mapDataWithNewTime(full7dData, 0);
 
       case 'custom':
+        // Other slice (e.g., 12 entries)
         return SENSOR_TREND_DATA.slice(12);
 
       case '24h':
       default:
+        // 24 entries
         return SENSOR_TREND_DATA
     }
   })();
@@ -384,21 +389,28 @@ export default function Analytics() {
 
   /* EXPORT: Sensor CSV (Only Selected) */
   const exportSensorDataCSV = () => {
+
     const activeKeys = Object.entries(selectedSensors)
       .filter(([_, isActive]) => isActive)
       .map(([key]) => key as SensorKey)
 
     const filename = `sensor_data_${sensorExportRange}_${formatDate()}.csv`
 
+    const timeHeader = sensorExportRange === '7d'
+      ? "Day & Time (168 Total Readings)"
+      : sensorExportRange === '48h'
+        ? "Day & Time (48 Total Readings)"
+        : "Time (24H)";
+
+    const headers = [timeHeader, ...activeKeys.map(k => {
+      const config = sensorConfig.find(s => s.key === k);
+      return config ? `${config.name.split('(')[0].trim()} (${config.unit})` : k;
+    })];
+
     const rows = filteredSensorData.map((entry: SensorTrendRow) => [
       entry.time,
       ...activeKeys.map((key: SensorKey) => entry[key])
     ])
-
-    const headers = ["Time (24H)", ...activeKeys.map(k => {
-      const config = sensorConfig.find(s => s.key === k);
-      return config ? `${config.name.split('(')[0].trim()} (${config.unit})` : k;
-    })];
 
     downloadCSV(filename, headers, rows)
   }
