@@ -291,14 +291,52 @@ export default function Analytics() {
     }
   })();
 
+  // Ang SENSOR_TREND_DATA ay may 24 entries (00:00, 01:00, ..., 23:00)
   const filteredSensorData = (() => {
+
+    // Helper function to create new data with adjusted time/index
+    const mapDataWithNewTime = (data: SensorTrendRow[], startIndex: number, step: number = 1) => {
+      return data
+        .filter((_, index) => index % step === 0) // Optional downsampling
+        .map((entry, index) => {
+          // Calculate time based on the index to show difference in duration
+          let hour = (startIndex + index) % 24;
+          let minute = 0;
+          let timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+          // For 48h and 7d, we'll prefix the day/cycle
+          if (sensorExportRange === '48h') {
+            const dayCycle = Math.floor(index / SENSOR_TREND_DATA.length) + 1;
+            timeString = `Day ${dayCycle} - ${entry.time}`;
+          } else if (sensorExportRange === '7d') {
+            const dayCycle = index + 1;
+            timeString = `Day ${dayCycle} - ${entry.time}`;
+          }
+
+          // If it's a full 24h set, stick to original times for clarity
+          if (sensorExportRange === '24h' || sensorExportRange === 'custom') {
+            timeString = entry.time;
+          }
+
+          return {
+            ...entry,
+            time: timeString
+          };
+        });
+    };
+
     switch (sensorExportRange) {
       case '48h':
-        return [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
+        const full48hData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
+        return mapDataWithNewTime(full48hData, 0);
+
       case '7d':
-        return SENSOR_TREND_DATA.filter((_, index) => index % 4 === 0).slice(0, 7);
+        const daySummaryData = SENSOR_TREND_DATA.filter((_, index) => index % 4 === 0).slice(0, 7);
+        return mapDataWithNewTime(daySummaryData, 0);
+
       case 'custom':
         return SENSOR_TREND_DATA.slice(12);
+
       case '24h':
       default:
         return SENSOR_TREND_DATA
