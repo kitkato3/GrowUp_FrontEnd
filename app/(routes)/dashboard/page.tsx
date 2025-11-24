@@ -237,6 +237,8 @@ export default function Dashboard() {
   const [localControls, setLocalControls] = useState<ControlState>({ ...controls })
   const [sensorData, setSensorData] = useState<SensorDataState>(INITIAL_SENSOR_DATA)
   const [alerts, setAlerts] = useState<AlertData[]>([])
+  const [isCameraConnected, setIsCameraConnected] = useState<boolean>(false)
+  const LIVE_STREAM_URL = "http://192.168.1.10:8080/?action=stream";
 
   const overallSeverity = alerts.reduce((maxSeverity, alert) => {
     if (alert.severity === 'high') {
@@ -255,42 +257,72 @@ export default function Dashboard() {
   }
 
   const status = getOverallStatus(overallSeverity);
-
+  // ➡️ DITO PWEDE ILAGAY ANG checkRaspiConnection function
+  const checkRaspiConnection = async () => {
+    try {
+      // ⚠️ TANDAAN: Palitan ang URL na ito sa actual na Raspi IP/Port at Status Endpoint
+      const statusResponse = await fetch("http://192.168.1.10:5000/api/status");
+      if (statusResponse.ok) {
+        setIsCameraConnected(true);
+      } else {
+        setIsCameraConnected(false);
+      }
+    } catch (error) {
+      console.error("Raspberry Pi connection check failed:", error);
+      setIsCameraConnected(false); // Kung may network error
+    }
+  };
   useEffect(() => {
     if (showControlsModal) setLocalControls({ ...controls })
   }, [showControlsModal, controls])
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date())
-
-      setSensorData(prev => {
-
-        const newSensorData: SensorDataState = {
-          waterTemp: Number.parseFloat((22 + Math.random() * 2).toFixed(1)),
-          ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
-          dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
-          waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
-          waterFlow: Number.parseFloat((4.5 + (Math.random() - 0.5) * 0.5).toFixed(1)), // 🌟 IDINAGDAG!
-          humidity: Number.parseFloat((60 + Math.random() * 10).toFixed(1)),
-          ammonia: Number.parseFloat((0.1 + Math.random() * 0.5).toFixed(1)),
-          lightIntensity: Number.parseFloat((14000 + Math.random() * 3000).toFixed(0)),
-          airTemp: Number.parseFloat((24 + Math.random() * 3).toFixed(1)),
-          airPressure: Number.parseFloat((1000 + Math.random() * 25).toFixed(1)),
+    const fetchSensorData = async () => {
+      try {
+        const API_URL = "http://[YOUR_RASPI_IP]:[YOUR_PORT]/api/sensors";
+        const response = await fetch(API_URL);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
+        const realData: SensorDataState = await response.json();
 
-        setAlerts(generateAlerts(newSensorData, thresholds))
+        setSensorData(realData);
+        setAlerts(generateAlerts(realData, thresholds));
 
-        return newSensorData
-      })
-    }, 3000)
+      } catch (error) {
+        console.error("Failed to fetch sensor data:", error);
+      }
+      setCurrentTime(new Date());
+    };
 
-    return () => clearInterval(interval)
-  }, [thresholds])
+    fetchSensorData();
+    const interval = setInterval(fetchSensorData, 3000);
 
-  const handleQuickControlsSave = () => {
-    quickSaveControls({ ...localControls })
-    setShowControlsModal(false)
+    return () => clearInterval(interval);
+  }, [thresholds]);
+
+  const handleQuickControlsSave = async () => {
+    try {
+      const API_URL = "http://[YOUR_RASPI_IP]:[YOUR_PORT]/api/controls";
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(localControls),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update controls: ${response.status}`);
+      }
+
+      quickSaveControls({ ...localControls });
+      alert("Controls successfully saved to system.");
+      setShowControlsModal(false);
+
+    } catch (error) {
+      console.error("Error saving controls:", error);
+      alert("Failed to connect to the system. Check Raspberry Pi connection.");
+    }
   }
 
   const ControlsModal = () => {
@@ -315,19 +347,30 @@ export default function Dashboard() {
     )
   }
 
-  const CameraModal = () => (
+  // CameraModal
+  const CameraModal = ({ isConnected, streamUrl, onClose }: { isConnected: boolean, streamUrl: string, onClose: () => void }) => (
     <div className="fixed inset-0 bg-black z-50 flex flex-col">
       <div className="flex items-center justify-between p-4 bg-black/80">
         <h2 className="text-white font-bold">Live Camera Feed</h2>
-        <button onClick={() => setShowCameraModal(false)} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><X className="w-6 h-6 text-white" /></button>
+        <button onClick={onClose} className="p-2 hover:bg-white/20 rounded-lg transition-colors"><X className="w-6 h-6 text-white" /></button>
       </div>
       <div className="flex-1 bg-gray-900 flex items-center justify-center relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/40 flex items-center justify-center">
-          <div className="text-center text-white">
-            <Camera className="w-20 h-20 mx-auto mb-4 opacity-50" />
-            <div className="text-xl font-semibold">Live Tower Feed</div>
+        {isConnected ? (
+          <img
+            src={streamUrl}
+            alt="Live Aquaponics Camera Feed"
+            className="w-full h-full object-contain"
+          />
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/40 flex items-center justify-center">
+            <div className="text-center text-white">
+              <Camera className="w-20 h-20 mx-auto mb-4 opacity-50" />
+              <div className="text-xl font-semibold">
+                Live Tower Feed <span className="text-red-400">(Disconnected)</span>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   )
@@ -379,14 +422,27 @@ export default function Dashboard() {
           </div>
         </div>
 
+        // Dashboard Preview
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
           <div className="bg-gray-900 aspect-video relative overflow-hidden group cursor-pointer" onClick={() => setShowCameraModal(true)}>
-            <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/40 flex items-center justify-center">
-              <div className="text-center text-white">
-                <Camera className="w-12 h-12 mx-auto mb-2 opacity-60" />
-                <div className="text-sm font-semibold">Live Feed</div>
+            {isCameraConnected ? (
+              // LIVE FEED
+              <img
+                src={LIVE_STREAM_URL}
+                alt="Live Preview"
+                className="w-full h-full object-cover"
+                style={{ filter: 'brightness(0.7)' }}
+              />
+            ) : (
+              // STATIC PLACEHOLDER
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-teal-900/40 flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Camera className="w-12 h-12 mx-auto mb-2 opacity-60" />
+                  <div className="text-sm font-semibold">Live Feed (Static)</div>
+                </div>
               </div>
-            </div>
+            )}
+            {/* ... (Existing Overlays: Time, Red Dot, Maximize Button) ... */}
             <div className="absolute top-3 right-3 bg-red-500 w-3 h-3 rounded-full animate-pulse"></div>
             <div className="absolute bottom-3 left-3 bg-black/60 px-2.5 py-1.5 rounded text-white text-xs font-mono">{currentTime.toLocaleTimeString()}</div>
             <button onClick={() => setShowCameraModal(true)} className="absolute bottom-3 right-3 bg-emerald-600 hover:bg-emerald-700 text-white p-2 rounded-lg transition-colors opacity-0 group-hover:opacity-100">
@@ -456,7 +512,13 @@ export default function Dashboard() {
 
       <BottomNavigation />
       {showControlsModal && <ControlsModal />}
-      {showCameraModal && <CameraModal />}
+      {showCameraModal && (
+        <CameraModal
+          isConnected={isCameraConnected}
+          streamUrl={LIVE_STREAM_URL}
+          onClose={() => setShowCameraModal(false)}
+        />
+      )}
     </div>
   )
 }
