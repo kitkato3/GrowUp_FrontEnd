@@ -16,7 +16,10 @@ type GrowthRow = { day: string, height: number, leaves: number, health: number }
 /* MOCK DATA */
 
 const WEEKLY_GROWTH_DATA: GrowthRow[] = [
-  { day: "Mon", height: 12.5, leaves: 8, health: 92 }, { day: "Tue", height: 13.2, leaves: 9, health: 94 }, { day: "Wed", height: 14.1, leaves: 10, health: 95 }, { day: "Thu", height: 15.3, leaves: 11, health: 96 }, { day: "Fri", height: 16.8, leaves: 12, health: 97 }, { day: "Sat", height: 18.2, leaves: 13, health: 98 }, { day: "Sun", height: 19.5, leaves: 14, health: 99 },
+  // Week 1 (Current Week - for context)
+  { day: "W1 Mon", height: 12.5, leaves: 8, health: 92 }, { day: "W1 Tue", height: 13.2, leaves: 9, health: 94 }, { day: "W1 Wed", height: 14.1, leaves: 10, health: 95 }, { day: "W1 Thu", height: 15.3, leaves: 11, health: 96 }, { day: "W1 Fri", height: 16.8, leaves: 12, health: 97 }, { day: "W1 Sat", height: 18.2, leaves: 13, health: 98 }, { day: "W1 Sun", height: 19.5, leaves: 14, health: 99 },
+  // Week 2 (Mock Previous Week)
+  { day: "W2 Mon", height: 20.0, leaves: 15, health: 99 }, { day: "W2 Tue", height: 20.5, leaves: 16, health: 99 }, { day: "W2 Wed", height: 21.1, leaves: 17, health: 98 }, { day: "W2 Thu", height: 21.6, leaves: 18, health: 97 }, { day: "W2 Fri", height: 22.3, leaves: 19, health: 97 }, { day: "W2 Sat", height: 23.0, leaves: 20, health: 98 }, { day: "W2 Sun", height: 23.5, leaves: 21, health: 99 },
 ]
 
 const SENSOR_TREND_DATA: SensorTrendRow[] = [
@@ -278,10 +281,11 @@ export default function Analytics() {
 
     switch (selectedRange) {
       case "lastWeek":
-        return WEEKLY_GROWTH_DATA.slice(1);
+        return WEEKLY_GROWTH_DATA.slice(0, 7);
       case "twoWeeks":
-        return WEEKLY_GROWTH_DATA.slice(0, 5);
+        return WEEKLY_GROWTH_DATA.slice(0, 14);
       case "thisWeek":
+        return WEEKLY_GROWTH_DATA.slice(7, 14);
       default:
         return WEEKLY_GROWTH_DATA;
     }
@@ -319,16 +323,24 @@ export default function Analytics() {
   }
   /* EXPORT: Plant Growth CSV */
   const exportGrowthDataCSV = () => {
-    const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
-    const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"]
-    // FIX: Explicitly typed 'd' to resolve ts(7006)
-    const rows = filteredGrowthData.map((d: GrowthRow) => [
-      d.day,
-      d.height,
-      d.leaves,
-      d.health
-    ])
+    const mockBaseDate = new Date(new Date().setDate(new Date().getDate() - filteredGrowthData.length));
 
+    const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
+    const headers = ["Date (Mock)", "Day", "Height (cm)", "Leaves", "Health (%)"]
+
+    const rows = filteredGrowthData.map((d: GrowthRow, index) => {
+      const mockDate = new Date(mockBaseDate);
+      mockDate.setDate(mockBaseDate.getDate() + index);
+      const dateString = mockDate.toISOString().split('T')[0];
+
+      return [
+        dateString, // Bagong Date Column
+        d.day,
+        d.height,
+        d.leaves,
+        d.health
+      ]
+    })
     downloadCSV(filename, headers, rows)
   }
 
@@ -338,14 +350,17 @@ export default function Analytics() {
       .filter(([_, isActive]) => isActive)
       .map(([key]) => key as SensorKey)
 
-    const filename = `sensor_data_${formatDate()}.csv`
-    const headers = ["Time", ...activeKeys.map(k =>
-      sensorConfig.find(s => s.key === k)?.name.split('(')[0].trim() || k
-    )]
-    const rows = SENSOR_TREND_DATA.map((entry) => [
+    const filename = `sensor_data_${sensorExportRange}_${formatDate()}.csv`
+
+    const rows = filteredSensorData.map((entry: SensorTrendRow) => [
       entry.time,
-      ...activeKeys.map((key) => entry[key])
+      ...activeKeys.map((key: SensorKey) => entry[key])
     ])
+
+    const headers = ["Time (24H)", ...activeKeys.map(k => {
+      const config = sensorConfig.find(s => s.key === k);
+      return config ? `${config.name.split('(')[0].trim()} (${config.unit})` : k;
+    })];
 
     downloadCSV(filename, headers, rows)
   }
@@ -363,7 +378,6 @@ export default function Analytics() {
       "Value4"
     ]
 
-    // FIX: Explicitly typed 'd' to resolve ts(7006)
     const growthRows = filteredGrowthData.map((d: GrowthRow) => [
       "Growth",
       d.day,
@@ -373,7 +387,7 @@ export default function Analytics() {
       ""
     ])
 
-    const sensorRows = SENSOR_TREND_DATA.map(d => [
+    const sensorRows = filteredSensorData.map((d: SensorTrendRow) => [
       "Sensor",
       d.time,
       `Water: ${d.waterTemp}°C`,
@@ -381,13 +395,10 @@ export default function Analytics() {
       `DO2: ${d.dissolvedO2}`,
       `Light: ${d.lightIntensity}lux`
     ])
-
     downloadCSV(filename, headers, [...growthRows, [""], ...sensorRows])
   }
 
-  /* ------------------------------------------------------
-      Sensor Configuration (Local handlers & array for buttons)
-  ------------------------------------------------------ */
+  /* Sensor Configuration (Local handlers & array for buttons)*/
   // Used for button rendering and visibility checks
   const localSensorConfig: { key: SensorKey; name: string; color: string }[] = [
     { key: "waterTemp", name: "Water Temp", color: "#3b82f6" },
