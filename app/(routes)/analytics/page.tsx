@@ -3,8 +3,8 @@
 import React, { useState, useEffect } from "react"
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts"
 import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, BarChart3, Clock } from "lucide-react"
-// Removed: import Link from "next/link"
-// Removed: import { usePathname } from "next/navigation"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 // Added CurrentView type for state-based navigation
 type CurrentView = 'home' | 'analytics' | 'camera' | 'settings';
