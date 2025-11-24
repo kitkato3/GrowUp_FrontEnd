@@ -57,7 +57,6 @@ const simulateDownloadFn = (mimeType: string, filename: string, contentLabel: st
     }, 10);
 }
 
-
 // --- Toast Component ---
 const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     if (!visible) return null;
@@ -228,7 +227,6 @@ export default function App() {
     }
 
     const handleGalleryDownload = (snapshot: Snapshot): void => {
-        // Renamed from handleDownload to avoid recursive loop, now performs the file saving logic
         simulateDownloadFn('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
         showToast(`Downloaded & saved: ${snapshot.date}`, 'success');
     }
@@ -285,10 +283,6 @@ export default function App() {
                         </div>
                     </div>
 
-                    {/* Detection Summary (Outside Zoom Transform) */}
-                    <div className="absolute bottom-4 right-4 bg-emerald-600/90 px-3 py-2 rounded-lg text-white font-semibold shadow-md backdrop-blur-sm">
-                        <div className="text-xs">4 Kales Detected</div>
-                    </div>
                 </div>
 
                 {/* Zoom Slider Controls */}

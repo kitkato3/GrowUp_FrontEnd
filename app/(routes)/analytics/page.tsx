@@ -6,24 +6,16 @@ import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, Bar
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-/* ------------------------------------------------------
-    TYPES
------------------------------------------------------- */
-
-// UPDATED: Added airPressure to the SensorKey type
 type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "nitrates" | "humidity" | "ammonia" | "airPressure"
 type SensorState = Record<SensorKey, boolean>
 type SensorTrendRow = { time: string } & Record<SensorKey, number>
 
-/* ------------------------------------------------------
-    MOCK DATA
------------------------------------------------------- */
-
+/* MOCK DATA */
 const WEEKLY_GROWTH_DATA = [
   { day: "Mon", height: 12.5, leaves: 8, health: 92 }, { day: "Tue", height: 13.2, leaves: 9, health: 94 }, { day: "Wed", height: 14.1, leaves: 10, health: 95 }, { day: "Thu", height: 15.3, leaves: 11, health: 96 }, { day: "Fri", height: 16.8, leaves: 12, health: 97 }, { day: "Sat", height: 18.2, leaves: 13, health: 98 }, { day: "Sun", height: 19.5, leaves: 14, health: 99 },
 ]
 
-// UPDATED: Added airPressure to the mock data
+
 const SENSOR_TREND_DATA: SensorTrendRow[] = [
   { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, nitrates: 15, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
   { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, nitrates: 14, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
@@ -33,9 +25,7 @@ const SENSOR_TREND_DATA: SensorTrendRow[] = [
   { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, nitrates: 16, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
 ]
 
-/* ------------------------------------------------------
-    UTILITY FUNCTIONS (No changes)
------------------------------------------------------- */
+/* UTILITY FUNCTIONS */
 
 const formatDate = () => {
   const now = new Date()
@@ -57,9 +47,7 @@ const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
   window.URL.revokeObjectURL(url)
 }
 
-/* ------------------------------------------------------
-    NAVIGATION COMPONENTS (No changes)
------------------------------------------------------- */
+/* NAVIGATION COMPONENTS */
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -98,9 +86,7 @@ const BottomNavigation = () => {
   );
 };
 
-/* ------------------------------------------------------
-    MAIN COMPONENT
------------------------------------------------------- */
+/* MAIN COMPONENT */
 
 export default function Analytics() {
   const [selectedSensors, setSelectedSensors] = useState<SensorState>({
@@ -114,7 +100,7 @@ export default function Analytics() {
     nitrates: false,
     humidity: false,
     ammonia: false,
-    airPressure: false, // Initial state for new sensor
+    airPressure: false,
   })
 
   const [selectedRange, setSelectedRange] = useState("thisWeek")
@@ -130,9 +116,7 @@ export default function Analytics() {
         ? WEEKLY_GROWTH_DATA.slice(1)
         : WEEKLY_GROWTH_DATA.slice(2)
 
-  /* ------------------------------------------------------
-      EXPORT: Plant Growth CSV (No changes)
-  ------------------------------------------------------ */
+  /* EXPORT: Plant Growth CSV */
   const exportGrowthDataCSV = () => {
     const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
     const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"]
@@ -146,9 +130,7 @@ export default function Analytics() {
     downloadCSV(filename, headers, rows)
   }
 
-  /* ------------------------------------------------------
-      EXPORT: Sensor CSV (Only Selected) - No changes
-  ------------------------------------------------------ */
+  /* EXPORT: Sensor CSV (Only Selected) */
   const exportSensorDataCSV = () => {
     const activeKeys = Object.entries(selectedSensors)
       .filter(([_, isActive]) => isActive)
@@ -166,9 +148,7 @@ export default function Analytics() {
     downloadCSV(filename, headers, rows)
   }
 
-  /* ------------------------------------------------------
-      EXPORT: All Data Combined (Simplified for this file)
-  ------------------------------------------------------ */
+  /* EXPORT: All Data Combined */
   const exportAllData = () => {
     const filename = `complete_analytics_${formatDate()}.csv`
 
@@ -190,7 +170,6 @@ export default function Analytics() {
       ""
     ])
 
-    // Note: This sensor row needs a full update if you want all 11 fields, but for a combined CSV, this simplified version is functional.
     const sensorRows = SENSOR_TREND_DATA.map(d => [
       "Sensor",
       d.time,
@@ -203,9 +182,7 @@ export default function Analytics() {
     downloadCSV(filename, headers, [...growthRows, [""], ...sensorRows])
   }
 
-  /* ------------------------------------------------------
-      Sensor Configuration (UPDATED)
-  ------------------------------------------------------ */
+  /* Sensor Configuration */
   const sensorConfig: { key: SensorKey; name: string; color: string }[] = [
     { key: "waterTemp", name: "Water Temp (°C)", color: "#3b82f6" },
     { key: "ph", name: "pH Level", color: "#8b5cf6" },
@@ -213,11 +190,11 @@ export default function Analytics() {
     { key: "airTemp", name: "Air Temp (°C)", color: "#f59e0b" },
     { key: "lightIntensity", name: "Light (lux)", color: "#eab308" },
     { key: "humidity", name: "Humidity (%)", color: "#14b8a6" },
-    { key: "airPressure", name: "Air Pressure (hPa)", color: "#ef4444" }, // NEW SENSOR
+    { key: "airPressure", name: "Air Pressure (hPa)", color: "#ef4444" },
     { key: "waterLevel", name: "Water Level (%)", color: "#06b6d4" },
     { key: "waterFlow", name: "Flow Rate (L/min)", color: "#6366f1" },
     { key: "ammonia", name: "Ammonia (ppm)", color: "#f97316" },
-    { key: "nitrates", name: "Nitrate (ppm)", color: "#ec4899" }, // Nitrates renamed for clarity
+    { key: "nitrates", name: "Nitrate (ppm)", color: "#ec4899" },
   ]
 
   const toggleSensor = (key: SensorKey) => {
@@ -243,7 +220,6 @@ export default function Analytics() {
   const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
   const activeCount = Object.values(selectedSensors).filter(Boolean).length
 
-  // Update current time locally
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date());
@@ -251,9 +227,7 @@ export default function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
-  /* ------------------------------------------------------
-      RENDER
-  ------------------------------------------------------ */
+  /* RENDER */
   return (
     <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
       <Navbar time={currentTime.toLocaleTimeString()} />
