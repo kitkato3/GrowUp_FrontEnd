@@ -471,11 +471,11 @@ export default function Analytics() {
                   <option value="thisWeek">This Week</option>
                   <option value="lastWeek">Last Week</option>
                   <option value="twoWeeks">Last 2 Weeks</option>
-                  <option value="customGrowth">Custom Range (Mock)</option>
+                  <option value="customGrowth">Custom Range</option>
                 </select>
                 {selectedRange === "customGrowth" && (
                   <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-700">Select Date Range (Max 7 Days)</p>
+                    <p className="text-xs font-semibold text-gray-700">Select Date Range</p>
                     <input
                       type="date"
                       value={customGrowthStartDate}
@@ -582,12 +582,12 @@ export default function Analytics() {
                 <option value="24h">Last 24 Hours</option>
                 <option value="48h">Last 48 Hours</option>
                 <option value="7d">Last 7 Days</option>
-                <option value="custom">Custom Range (Mock)</option>
+                <option value="custom">Custom Range</option>
               </select>
             </div>
             {sensorExportRange === "custom" && (
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-xs font-semibold text-gray-700 mb-2">Select Date Range (Max 7 Days)</p>
+                <p className="text-xs font-semibold text-gray-700 mb-2">Select Date Range</p>
                 <div className="flex gap-2">
                   <input
                     type="date"

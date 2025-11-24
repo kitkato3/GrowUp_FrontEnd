@@ -22,6 +22,27 @@ import { usePathname } from "next/navigation"
 
 /* TYPES & INITIAL STATES */
 
+interface SensorDataState {
+  waterTemp: number;
+  ph: number;
+  dissolvedO2: number;
+  ammonia: number;
+  airTemp: number;
+  waterFlow: number;
+  airHumidity: number;
+  chemLevel: number;
+  lightIntensity: number;
+}
+
+interface AlertData {
+  id: number;
+  type: "warning" | "error" | "info";
+  severity: "low" | "medium" | "high" | "critical";
+  title: string;
+  message: string;
+  time: string;
+}
+
 interface SystemControls { pump: boolean; fan: boolean; phAdjustment: boolean; aerator: boolean; growLight: boolean; }
 
 interface ThresholdState {
@@ -30,6 +51,10 @@ interface ThresholdState {
   dissolvedO2: { min: number; max: number };
   ammonia: { min: number; max: number };
   airTemp: { min: number; max: number };
+  waterFlow: { min: number; max: number }; // For Submersible Pump
+  airHumidity: { min: number; max: number }; // For DC Fan (relative humidity)
+  chemLevel: { min: number; max: number }; // For pH Adjustment (chemical volume)
+  lightIntensity: { min: number; max: number }; // For Grow Light
 }
 interface ControlToggleProps { label: string; description: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
 interface PresetCardProps { title: string; description: string; icon: React.ElementType; active: boolean; onActivate: () => void; }
@@ -54,9 +79,169 @@ const INITIAL_THRESHOLDS: ThresholdState = {
   dissolvedO2: { min: 5, max: 8 },
   ammonia: { min: 0, max: 0.5 },
   airTemp: { min: 22, max: 28 },
+  waterFlow: { min: 8, max: 12 },
+  airHumidity: { min: 50, max: 70 },
+  chemLevel: { min: 20, max: 100 },
+  lightIntensity: { min: 500, max: 1500 },
 }
 
 const localStorageKey = 'aquaponics_settings_state';
+
+// --- DYNAMIC ALERT SYSTEM ---
+
+// Convert time to human-readable
+const timeAgo = (date: Date) => {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+
+  if (seconds < 60) return "Just now"
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  return `${hours} hrs ago`
+}
+
+// Generate alerts based on live sensor values
+const generateAlerts = (
+  sensor: SensorDataState,
+  // Kailangan nating i-include ang lahat ng bagong threshold keys dito
+  thresholds: ThresholdState & {
+    waterFlow?: { min: number; max: number };
+    airHumidity?: { min: number; max: number };
+    chemLevel?: { min: number; max: number };
+    lightIntensity?: { min: number; max: number };
+  }
+): AlertData[] => {
+  const now = new Date()
+  const alerts: AlertData[] = []
+  let alertId = 10; // Start ID from 10, following existing IDs 1-9
+
+  // --- Water Temperature (EXISTING) ---
+  if (sensor.waterTemp < thresholds.waterTemp.min) {
+    alerts.push({
+      id: 1, type: "warning", severity: "medium", title: "Water Temperature Low",
+      message: `Current water temperature is ${sensor.waterTemp}°C, below optimal range.`, time: timeAgo(now),
+    })
+  }
+  if (sensor.waterTemp > thresholds.waterTemp.max) {
+    alerts.push({
+      id: 2, type: "warning", severity: "medium", title: "Water Temperature High",
+      message: `Water temperature is ${sensor.waterTemp}°C, above optimal range.`, time: timeAgo(now),
+    })
+  }
+
+  // --- pH Level (EXISTING) ---
+  if (sensor.ph < thresholds.ph.min) {
+    alerts.push({
+      id: 3, type: "warning", severity: "medium", title: "pH Level Low",
+      message: `Current pH is ${sensor.ph}. Below optimal for plants & bacteria.`, time: timeAgo(now),
+    })
+  }
+  if (sensor.ph > thresholds.ph.max) {
+    alerts.push({
+      id: 4, type: "warning", severity: "medium", title: "pH Level High",
+      message: `Current pH is ${sensor.ph}. Above safe range.`, time: timeAgo(now),
+    })
+  }
+
+  // --- Dissolved Oxygen (EXISTING) ---
+  if (sensor.dissolvedO2 < thresholds.dissolvedO2.min) {
+    alerts.push({
+      id: 5, type: "warning", severity: "high", title: "Dissolved Oxygen Low",
+      message: `DO is ${sensor.dissolvedO2} mg/L. Aeration required immediately.`, time: timeAgo(now),
+    })
+  }
+  if (sensor.dissolvedO2 > thresholds.dissolvedO2.max) {
+    alerts.push({
+      id: 6, type: "info", severity: "low", title: "Dissolved Oxygen Slightly High",
+      message: `DO is ${sensor.dissolvedO2} mg/L, slightly above optimal.`, time: timeAgo(now),
+    })
+  }
+
+  // --- Ammonia (EXISTING) ---
+  if (sensor.ammonia > thresholds.ammonia.max) {
+    alerts.push({
+      id: 7, type: "warning", severity: "high", title: "Ammonia Level High",
+      message: `Ammonia at ${sensor.ammonia} ppm. Toxic levels detected.`, time: timeAgo(now),
+    })
+  }
+
+  // --- Water Flow Rate (EXISTING) ---
+  if (thresholds.waterFlow && sensor.waterFlow !== undefined) {
+    if (sensor.waterFlow < thresholds.waterFlow.min) {
+      alerts.push({
+        id: 8, type: "error", severity: "critical", title: "PUMP ERROR: Water Flow Low",
+        message: `Current water flow is ${sensor.waterFlow} L/min, potentially indicating a pump malfunction or blockage.`, time: timeAgo(now),
+      })
+    }
+    if (sensor.waterFlow > thresholds.waterFlow.max) {
+      alerts.push({
+        id: 9, type: "warning", severity: "medium", title: "Water Flow High",
+        message: `Current water flow is ${sensor.waterFlow} L/min, check for possible pipe breaches or sensor error.`, time: timeAgo(now),
+      })
+    }
+  }
+
+  // --- 🌟 NEW ALERT LOGIC ADDITIONS 🌟 ---
+
+  // --- Air Temperature ---
+  if (sensor.airTemp < thresholds.airTemp.min) {
+    alerts.push({
+      id: alertId++, type: "warning", severity: "low", title: "Air Temperature Low",
+      message: `Air temperature is ${sensor.airTemp}°C. May stunt plant growth.`, time: timeAgo(now),
+    })
+  }
+  if (sensor.airTemp > thresholds.airTemp.max) {
+    alerts.push({
+      id: alertId++, type: "warning", severity: "medium", title: "Air Temperature High",
+      message: `Air temperature is ${sensor.airTemp}°C. Check DC Fan operation.`, time: timeAgo(now),
+    })
+  }
+
+  // --- Air Humidity (DC Fan Control) ---
+  if (thresholds.airHumidity && sensor.airHumidity !== undefined) {
+    if (sensor.airHumidity > thresholds.airHumidity.max) {
+      alerts.push({
+        id: alertId++, type: "warning", severity: "low", title: "Air Humidity High",
+        message: `Humidity is ${sensor.airHumidity}%. High risk of mold/fungus. Fan may be required.`, time: timeAgo(now),
+      })
+    }
+    if (sensor.airHumidity < thresholds.airHumidity.min) {
+      alerts.push({
+        id: alertId++, type: "warning", severity: "low", title: "Air Humidity Low",
+        message: `Humidity is ${sensor.airHumidity}%. Risk of plant dehydration.`, time: timeAgo(now),
+      })
+    }
+  }
+
+  // --- pH Chemical Level (pH Adjustment Control) ---
+  if (thresholds.chemLevel && sensor.chemLevel !== undefined) {
+    if (sensor.chemLevel < thresholds.chemLevel.min) {
+      alerts.push({
+        id: alertId++, type: "error", severity: "critical", title: "Chemical Stock Low",
+        message: `pH Adjustment chemical level is ${sensor.chemLevel}% full. Refill immediately to prevent pH drift.`, time: timeAgo(now),
+      })
+    }
+  }
+
+  // --- Light Intensity (Grow Light Control) ---
+  if (thresholds.lightIntensity && sensor.lightIntensity !== undefined) {
+    if (sensor.lightIntensity < thresholds.lightIntensity.min) {
+      alerts.push({
+        id: alertId++, type: "warning", severity: "medium", title: "Low Light Intensity",
+        message: `Light intensity is ${sensor.lightIntensity} Lux. Below target for optimal growth.`, time: timeAgo(now),
+      })
+    }
+    if (sensor.lightIntensity > thresholds.lightIntensity.max) {
+      alerts.push({
+        id: alertId++, type: "info", severity: "low", title: "High Light Intensity",
+        message: `Light intensity is ${sensor.lightIntensity} Lux. Check light schedule or cooling.`, time: timeAgo(now),
+      })
+    }
+  }
+
+  // Return only alerts that triggered
+  return alerts
+}
 
 /**
  * Synchronously loads state from localStorage.
@@ -336,7 +521,11 @@ export default function SettingsPage() {
           ph: { min: 6.5, max: 7.5 },
           dissolvedO2: { min: 5.5, max: 8.0 },
           ammonia: { min: 0.0, max: 0.2 },
-          airTemp: { min: 22.0, max: 28.0 }
+          airTemp: { min: 22.0, max: 28.0 },
+          waterFlow: { min: 8.0, max: 12.0 },
+          airHumidity: { min: 50.0, max: 70.0 },
+          chemLevel: { min: 25.0, max: 100.0 },
+          lightIntensity: { min: 800.0, max: 1500.0 }
         }
         break
 
@@ -347,7 +536,11 @@ export default function SettingsPage() {
           ph: { min: 6.0, max: 7.0 },
           dissolvedO2: { min: 6.0, max: 8.5 },
           ammonia: { min: 0.0, max: 0.1 },
-          airTemp: { min: 24.0, max: 26.0 }
+          airTemp: { min: 24.0, max: 26.0 },
+          waterFlow: { min: 10.0, max: 15.0 },
+          airHumidity: { min: 60.0, max: 80.0 },
+          chemLevel: { min: 50.0, max: 100.0 },
+          lightIntensity: { min: 1800.0, max: 2500.0 }
         }
         break
 
@@ -358,7 +551,11 @@ export default function SettingsPage() {
           ph: { min: 6.0, max: 8.0 },
           dissolvedO2: { min: 5.0, max: 8.0 },
           ammonia: { min: 0.0, max: 0.5 },
-          airTemp: { min: 20.0, max: 30.0 }
+          airTemp: { min: 20.0, max: 30.0 },
+          waterFlow: { min: 5.0, max: 10.0 },
+          airHumidity: { min: 40.0, max: 70.0 },
+          chemLevel: { min: 10.0, max: 100.0 },
+          lightIntensity: { min: 300.0, max: 800.0 }
         }
         break
 
@@ -369,7 +566,11 @@ export default function SettingsPage() {
           ph: { min: 6.5, max: 7.5 },
           dissolvedO2: { min: 5.5, max: 8.0 },
           ammonia: { min: 0.0, max: 0.2 },
-          airTemp: { min: 22.0, max: 28.0 }
+          airTemp: { min: 22.0, max: 28.0 },
+          waterFlow: { min: 0.0, max: 1.0 },
+          airHumidity: { min: 40.0, max: 80.0 },
+          chemLevel: { min: 10.0, max: 100.0 },
+          lightIntensity: { min: 0.0, max: 100.0 }
         }
         break
       default:
@@ -501,6 +702,50 @@ export default function SettingsPage() {
                 maxLimit={2}
                 onMinChange={(val) => handleThresholdChange('ammonia', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('ammonia', 'max', val)}
+              />
+              <ThresholdRangeInput
+                label="Water Flow Rate"
+                unit="L/min"
+                icon={Waves}
+                minValue={thresholds.waterFlow.min}
+                maxValue={thresholds.waterFlow.max}
+                minLimit={1}
+                maxLimit={20}
+                onMinChange={(val) => handleThresholdChange('waterFlow', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('waterFlow', 'max', val)}
+              />
+              <ThresholdRangeInput
+                label="Air Humidity"
+                unit="%"
+                icon={Droplets}
+                minValue={thresholds.airHumidity.min}
+                maxValue={thresholds.airHumidity.max}
+                minLimit={30}
+                maxLimit={90}
+                onMinChange={(val) => handleThresholdChange('airHumidity', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('airHumidity', 'max', val)}
+              />
+              <ThresholdRangeInput
+                label="pH Chemical Level"
+                unit="% Full"
+                icon={AlertTriangle}
+                minValue={thresholds.chemLevel.min}
+                maxValue={thresholds.chemLevel.max}
+                minLimit={10}
+                maxLimit={100}
+                onMinChange={(val) => handleThresholdChange('chemLevel', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('chemLevel', 'max', val)}
+              />
+              <ThresholdRangeInput
+                label="Grow Light Intensity"
+                unit="Lux"
+                icon={Sun}
+                minValue={thresholds.lightIntensity.min}
+                maxValue={thresholds.lightIntensity.max}
+                minLimit={100}
+                maxLimit={3000}
+                onMinChange={(val) => handleThresholdChange('lightIntensity', 'min', val)}
+                onMaxChange={(val) => handleThresholdChange('lightIntensity', 'max', val)}
               />
             </div>
           </div>
