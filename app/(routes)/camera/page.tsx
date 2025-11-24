@@ -1,12 +1,15 @@
-import React, { useState, useEffect, useCallback } from "react"
+"use client"
+
 import { Camera, X, Download, Trash2, Maximize2, Home, BarChart3, Settings } from "lucide-react"
+import React, { useState, useEffect, useCallback } from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 
 // --- TYPE DEFINITIONS ---
 interface PlantDetection { name: string; status: string; color: 'emerald' | 'amber'; }
 interface Snapshot { id: number; date: string; time: string; thumbnail: string; }
 interface SettingsState { resolution: string; fps: number; brightness: number; contrast: number; detectionSensitivity: number; autoFocus: boolean; nightMode: boolean; motionDetection: boolean; }
 interface ToastProps { message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default'; onClose: () => void; }
-type CurrentView = 'home' | 'analytics' | 'settings';
 
 // --- MOCK DATA ---
 const PLANT_DETECTIONS: PlantDetection[] = [
@@ -76,7 +79,6 @@ const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     );
 };
 
-// --- Navbar Component ---
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
     <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
         <span className="font-bold text-gray-900">GROWUP</span>
@@ -87,29 +89,26 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
     </div>
 );
 
-// --- Bottom Navigation Component ---
-const BottomNavigation: React.FC<{ currentView: CurrentView, setView: (view: CurrentView) => void }> = ({ currentView, setView }) => {
+const BottomNavigation = () => {
+    const pathname = usePathname();
     const tabs = [
-        { id: "home", label: "Home", view: "home" as CurrentView, icon: Home },
-        { id: "analytics", label: "Analytics", view: "analytics" as CurrentView, icon: BarChart3 },
-        { id: "settings", label: "Settings", view: "settings" as CurrentView, icon: Settings },
+        { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
+        { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
+        { id: "camera", label: "Camera", href: "/camera", icon: Camera },
+        { id: "settings", label: "Settings", href: "/settings", icon: Settings },
     ];
 
     return (
         <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
             <div className="flex items-center justify-around py-3">
                 {tabs.map((tab) => {
-                    const isActive = currentView === tab.view;
+                    const isActive = pathname.startsWith(tab.href);
                     const Icon = tab.icon;
                     return (
-                        <button
-                            key={tab.id}
-                            onClick={() => setView(tab.view)}
-                            className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
-                        >
+                        <Link key={tab.id} href={tab.href} className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}>
                             <Icon className="w-5 h-5 mb-1" />
                             <span className="text-xs font-semibold">{tab.label}</span>
-                        </button>
+                        </Link>
                     );
                 })}
             </div>
@@ -118,204 +117,11 @@ const BottomNavigation: React.FC<{ currentView: CurrentView, setView: (view: Cur
 };
 
 
-// --- Settings View Component ---
-const SettingsView: React.FC<{ settings: SettingsState, handleSettingChange: (key: keyof SettingsState, value: string | number | boolean) => void, onSave: () => void }> = ({ settings, handleSettingChange, onSave }) => (
-    <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-2xl">
-            <h2 className="text-xl font-bold text-gray-900">Camera Settings</h2>
-        </div>
-        <div className="p-4 space-y-6">
-            {/* Resolution */}
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Resolution</label><select value={settings.resolution} onChange={(e) => handleSettingChange("resolution", e.target.value)} className="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-emerald-500 focus:border-emerald-500"><option value="720p">720p (HD)</option><option value="1080p">1080p (Full HD)</option></select></div>
-            {/* FPS */}
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Frame Rate (FPS)</label><select value={settings.fps} onChange={(e) => handleSettingChange("fps", Number(e.target.value))} className="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-emerald-500 focus:border-emerald-500"><option value={15}>15 FPS</option><option value={30}>30 FPS</option></select></div>
-            {/* Brightness */}
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Brightness: <span className="text-emerald-600 font-bold">{settings.brightness}%</span></label><input type="range" min="0" max="100" value={settings.brightness} onChange={(e) => handleSettingChange("brightness", Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg accent-emerald-500" /></div>
-            {/* Contrast */}
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Contrast: <span className="text-emerald-600 font-bold">{settings.contrast}%</span></label><input type="range" min="0" max="100" value={settings.contrast} onChange={(e) => handleSettingChange("contrast", Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500" /></div>
-            {/* AI Sensitivity */}
-            <div><label className="block text-sm font-semibold text-gray-700 mb-2">AI Detection Sensitivity: <span className="text-emerald-600 font-bold">{settings.detectionSensitivity}%</span></label><input type="range" min="0" max="100" value={settings.detectionSensitivity} onChange={(e) => handleSettingChange("detectionSensitivity", Number(e.target.value))} className="w-full h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" /><p className="text-xs text-gray-500 mt-1">Higher sensitivity detects more kale but may increase false positives</p></div>
-            {/* Motion Detection Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200"><div><div className="font-semibold text-gray-900">Motion Detection</div><div className="text-xs text-gray-500">Alert on movement detection</div></div><label className="relative inline-block w-12 h-6"><input type="checkbox" checked={settings.motionDetection} onChange={(e) => handleSettingChange("motionDetection", e.target.checked)} className="sr-only peer" /><div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div></label></div>
-            {/* Save Button */}
-            <div className="pt-2"><button onClick={onSave} className="w-full p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors shadow-lg hover:shadow-xl active:scale-[0.99]">Save Settings</button></div>
-        </div>
-    </div>
-);
-
-// --- Home/Dashboard Component ---
-const Dashboard: React.FC<{
-    currentTime: Date;
-    settings: SettingsState;
-    isRecording: boolean;
-    recordingDuration: number;
-    zoomLevel: number;
-    showZoomControls: boolean;
-    handleRecord: () => void;
-    handleZoomToggle: () => void;
-    handleZoomChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    setShowGallery: (show: boolean) => void;
-    setView: (view: CurrentView) => void;
-}> = ({
-    currentTime,
-    settings,
-    isRecording,
-    recordingDuration,
-    zoomLevel,
-    showZoomControls,
-    handleRecord,
-    handleZoomToggle,
-    handleZoomChange,
-    setShowGallery,
-    setView
-}) => (
-        <div className="space-y-5 pb-5 px-4 pt-5">
-            <h1 className="text-3xl font-extrabold text-gray-800 pt-2">Camera Monitor</h1>
-            <p className="text-gray-500 -mt-3">Real-time surveillance and health analysis for your Kale Tower.</p>
-
-            {/* Camera Feed */}
-            <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group shadow-xl">
-                {/* Zoom Wrapper to apply transformation */}
-                <div
-                    className="absolute inset-0 transition-transform duration-300 ease-in-out"
-                    style={{ transform: `scale(${zoomLevel})` }}
-                >
-                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
-                        <div className="text-center text-white">
-                            <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                            <div className="text-lg font-semibold">Live Kale Tower Feed</div>
-                            <div className="text-sm opacity-70">AI Plant Detection Active</div>
-                        </div>
-                    </div>
-
-                    {/* Recording Duration Indicator */}
-                    {isRecording && (
-                        <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded-xl font-bold text-sm shadow-md backdrop-blur-sm">
-                            REC {formatDuration(recordingDuration)}
-                        </div>
-                    )}
-
-                    {/* Live/Recording indicator */}
-                    <div className={`absolute top-4 right-4 w-4 h-4 rounded-full shadow-md ${isRecording ? 'bg-red-600 animate-pulse' : 'bg-green-500'}`}></div>
-
-                    {/* Time and Specs */}
-                    <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
-                        <div className="text-sm font-semibold font-mono">
-                            {currentTime.toLocaleTimeString()}
-                        </div>
-                        <div className="text-xs text-gray-300">
-                            {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : 'Live'}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Zoom Slider Controls */}
-            {showZoomControls && (
-                <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                    <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                        Zoom Level: <span className="text-purple-600">{zoomLevel.toFixed(1)}x</span>
-                    </h3>
-                    <input
-                        type="range"
-                        min="1.0"
-                        max="4.0"
-                        step="0.1"
-                        value={zoomLevel}
-                        onChange={handleZoomChange}
-                        className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                    />
-                    <div className="flex justify-between text-sm text-gray-500 mt-2">
-                        <span>1x (Wide)</span>
-                        <span>4x (Macro)</span>
-                    </div>
-                </div>
-            )}
-
-            {/* AI Detection Results */}
-            <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                    <span className="text-emerald-500">AI</span> Plant Health Status
-                </h3>
-                <div className="space-y-3">
-                    {PLANT_DETECTIONS.map((plant, idx) => (
-                        <div
-                            key={idx}
-                            className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
-                                ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
-                                : "bg-amber-50 border border-amber-200 hover:shadow-md"
-                                }`}
-                        >
-                            <div className="flex items-center gap-3">
-                                <div
-                                    className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
-                                ></div>
-                                <span className="font-medium text-gray-900">{plant.name}</span>
-                            </div>
-                            <span
-                                className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
-                            >
-                                {plant.status}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Camera Controls */}
-            <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                    Action Center
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                    <button
-                        onClick={() => setShowGallery(true)}
-                        className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                    >
-                        🖼️ Gallery
-                    </button>
-                    <button
-                        onClick={handleRecord}
-                        className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${isRecording
-                            ? "bg-red-500 hover:bg-red-600 text-white"
-                            : "bg-blue-100 hover:bg-blue-200 text-blue-700"
-                            }`}
-                    >
-                        {isRecording ? (
-                            <span className="inline-flex items-center gap-2">
-                                <span className="animate-ping inline-block w-3 h-3 bg-white rounded-full"></span>
-                                STOP ({formatDuration(recordingDuration)})
-                            </span>
-                        ) : (
-                            "🎥 Record"
-                        )}
-                    </button>
-                    <button
-                        onClick={handleZoomToggle}
-                        className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${showZoomControls
-                            ? "bg-purple-500 hover:bg-purple-600 text-white"
-                            : "bg-purple-100 hover:bg-purple-200 text-purple-700"
-                            }`}
-                    >
-                        🔍 Zoom ({zoomLevel.toFixed(1)}x)
-                    </button>
-                    <button
-                        onClick={() => setView('settings')}
-                        className="p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                    >
-                        ⚙️ Settings
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
-
 // --- Main App Component ---
 
 export default function App() {
     const [currentTime, setCurrentTime] = useState<Date>(new Date())
-    const [view, setView] = useState<CurrentView>('home');
+    const [showSettings, setShowSettings] = useState<boolean>(false)
     const [showGallery, setShowGallery] = useState<boolean>(false)
     const [selectedSnapshot, setSelectedSnapshot] = useState<Snapshot | null>(null)
     const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -353,9 +159,8 @@ export default function App() {
         } else if (!isRecording && recordingDuration > 0) {
             if (recordingDuration >= 3) {
                 simulateDownloadFn('video/mp4', `kale_video_${new Date().toISOString()}.mp4`, 'Recorded Video', recordingDuration);
-                showToast(`✅ Video saved! (${formatDuration(recordingDuration)})`, 'success');
             } else if (recordingDuration > 0) {
-                showToast("Recording too short (< 3s), file discarded.", 'warning');
+                showToast("Recording too short, file discarded.", 'warning');
             }
             setRecordingDuration(0);
         }
@@ -365,6 +170,19 @@ export default function App() {
 
     const handleSettingChange = (key: keyof SettingsState, value: string | number | boolean): void => {
         setSettings(prev => ({ ...prev, [key]: value }))
+    }
+
+    // HANDLED DOWNLOAD: This function is now responsible for downloading the FULL VIEW snapshot
+    const handleDownload = (): void => {
+        if (selectedSnapshot) {
+            handleGalleryDownload(selectedSnapshot);
+        } else {
+            showToast("Error: No snapshot selected for download.", 'warning');
+        }
+    }
+
+    const handleSnapshot = (): void => {
+        showToast("Use the Gallery button to view and download snapshots.", 'info');
     }
 
     const handleRecord = (): void => {
@@ -392,7 +210,7 @@ export default function App() {
 
 
     const handleSaveSettings = (): void => {
-        setView('home'); // Go back to the main view after saving
+        setShowSettings(false);
         showToast("✅ Settings saved successfully!", 'success');
     }
 
@@ -406,52 +224,156 @@ export default function App() {
         setSelectedSnapshot(null);
     }
 
-    const renderContent = () => {
-        switch (view) {
-            case 'analytics':
-                return (
-                    <div className="p-8 text-center text-gray-600">
-                        <BarChart3 className="w-12 h-12 mx-auto text-emerald-500 mb-4" />
-                        <h2 className="text-2xl font-bold mb-2">Plant Analytics</h2>
-                        <p>This section would display growth charts, environmental data (pH, humidity), and historical health trends.</p>
-                        <p className="mt-4 text-sm text-gray-400">Mock data is not implemented for this view.</p>
-                    </div>
-                );
-            case 'settings':
-                return (
-                    <div className="p-4">
-                        <SettingsView settings={settings} handleSettingChange={handleSettingChange} onSave={handleSaveSettings} />
-                    </div>
-                );
-            case 'home':
-            default:
-                return (
-                    <Dashboard
-                        currentTime={currentTime}
-                        settings={settings}
-                        isRecording={isRecording}
-                        recordingDuration={recordingDuration}
-                        zoomLevel={zoomLevel}
-                        showZoomControls={showZoomControls}
-                        handleRecord={handleRecord}
-                        handleZoomToggle={handleZoomToggle}
-                        handleZoomChange={handleZoomChange}
-                        setShowGallery={setShowGallery}
-                        setView={setView}
-                    />
-                );
-        }
-    }
 
     return (
         <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
             <Navbar time={currentTime.toLocaleTimeString()} />
 
-            <div className="pb-24">
-                {renderContent()}
+            <div className="space-y-5 pb-24 px-4 py-5">
+                <h1 className="text-3xl font-extrabold text-gray-800 pt-2">
+                    Camera Monitor
+                </h1>
+                <p className="text-gray-500 -mt-3">Real-time surveillance and health analysis for your Kale Tower.</p>
+
+                {/* Camera Feed */}
+                <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group shadow-xl">
+                    {/* Zoom Wrapper to apply transformation */}
+                    <div
+                        className="absolute inset-0 transition-transform duration-300 ease-in-out"
+                        style={{ transform: `scale(${zoomLevel})` }}
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
+                            <div className="text-center text-white">
+                                <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                                <div className="text-lg font-semibold">Live Kale Tower Feed</div>
+                                <div className="text-sm opacity-70">AI Plant Detection Active</div>
+                            </div>
+                        </div>
+
+                        {/* Recording Duration Indicator */}
+                        {isRecording && (
+                            <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded-xl font-bold text-sm shadow-md backdrop-blur-sm">
+                                REC {formatDuration(recordingDuration)}
+                            </div>
+                        )}
+
+                        {/* Live/Recording indicator */}
+                        <div className={`absolute top-4 right-4 w-4 h-4 rounded-full shadow-md ${isRecording ? 'bg-red-600 animate-pulse' : 'bg-green-500'}`}></div>
+
+                        {/* Time and Specs */}
+                        <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
+                            <div className="text-sm font-semibold font-mono">
+                                {currentTime.toLocaleTimeString()}
+                            </div>
+                            <div className="text-xs text-gray-300">
+                                {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : 'Live'}
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                {/* Zoom Slider Controls */}
+                {showZoomControls && (
+                    <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                        <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                            Zoom Level: <span className="text-purple-600">{zoomLevel.toFixed(1)}x</span>
+                        </h3>
+                        <input
+                            type="range"
+                            min="1.0"
+                            max="4.0"
+                            step="0.1"
+                            value={zoomLevel}
+                            onChange={handleZoomChange}
+                            className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                        />
+                        <div className="flex justify-between text-sm text-gray-500 mt-2">
+                            <span>1x (Wide)</span>
+                            <span>4x (Macro)</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* AI Detection Results */}
+                <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                    <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                        <span className="text-emerald-500">AI</span> Plant Health Status
+                    </h3>
+                    <div className="space-y-3">
+                        {PLANT_DETECTIONS.map((plant, idx) => (
+                            <div
+                                key={idx}
+                                className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
+                                    ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
+                                    : "bg-amber-50 border border-amber-200 hover:shadow-md"
+                                    }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div
+                                        className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
+                                    ></div>
+                                    <span className="font-medium text-gray-900">{plant.name}</span>
+                                </div>
+                                <span
+                                    className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
+                                >
+                                    {plant.status}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Camera Controls */}
+                <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                    <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                        Action Center
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => setShowGallery(true)}
+                            className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                        >
+                            🖼️ Gallery
+                        </button>
+                        <button
+                            onClick={handleRecord}
+                            className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${isRecording
+                                ? "bg-red-500 hover:bg-red-600 text-white"
+                                : "bg-blue-100 hover:bg-blue-200 text-blue-700"
+                                }`}
+                        >
+                            {isRecording ? (
+                                <span className="inline-flex items-center gap-2">
+                                    <span className="animate-ping inline-block w-3 h-3 bg-white rounded-full"></span>
+                                    STOP ({formatDuration(recordingDuration)})
+                                </span>
+                            ) : (
+                                "🎥 Record"
+                            )}
+                        </button>
+                        <button
+                            onClick={handleZoomToggle}
+                            className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${showZoomControls
+                                ? "bg-purple-500 hover:bg-purple-600 text-white"
+                                : "bg-purple-100 hover:bg-purple-200 text-purple-700"
+                                }`}
+                        >
+                            🔍 Zoom ({zoomLevel.toFixed(1)}x)
+                        </button>
+                        <button
+                            onClick={() => setShowSettings(true)}
+                            className="p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                        >
+                            ⚙️ Settings
+                        </button>
+                    </div>
+                </div>
+
             </div>
 
-            <BottomNavigation currentView={view === 'settings' ? 'home' : view} setView={setView} />
+            <BottomNavigation />
 
             {/* Toast Notification */}
             <Toast
@@ -506,6 +428,34 @@ export default function App() {
                                     <button onClick={() => { setSelectedSnapshot(null); setShowGallery(false); }} className="w-full mt-4 p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close & Exit</button>
                                 </div>
                             </>) : null}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-2xl">
+                            <h2 className="text-xl font-bold text-gray-900">Camera Settings</h2>
+                            <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full"><X className="w-6 h-6" /></button>
+                        </div>
+                        <div className="p-4 space-y-6">
+                            {/* Resolution */}
+                            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Resolution</label><select value={settings.resolution} onChange={(e) => handleSettingChange("resolution", e.target.value)} className="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-emerald-500 focus:border-emerald-500"><option value="720p">720p (HD)</option><option value="1080p">1080p (Full HD)</option></select></div>
+                            {/* FPS */}
+                            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Frame Rate (FPS)</label><select value={settings.fps} onChange={(e) => handleSettingChange("fps", Number(e.target.value))} className="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-emerald-500 focus:border-emerald-500"><option value={15}>15 FPS</option><option value={30}>30 FPS</option></select></div>
+                            {/* Brightness */}
+                            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Brightness: <span className="text-emerald-600 font-bold">{settings.brightness}%</span></label><input type="range" min="0" max="100" value={settings.brightness} onChange={(e) => handleSettingChange("brightness", Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg accent-emerald-500" /></div>
+                            {/* Contrast */}
+                            <div><label className="block text-sm font-semibold text-gray-700 mb-2">Contrast: <span className="text-emerald-600 font-bold">{settings.contrast}%</span></label><input type="range" min="0" max="100" value={settings.contrast} onChange={(e) => handleSettingChange("contrast", Number(e.target.value))} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-500" /></div>
+                            {/* AI Sensitivity */}
+                            <div><label className="block text-sm font-semibold text-gray-700 mb-2">AI Detection Sensitivity: <span className="text-emerald-600 font-bold">{settings.detectionSensitivity}%</span></label><input type="range" min="0" max="100" value={settings.detectionSensitivity} onChange={(e) => handleSettingChange("detectionSensitivity", Number(e.target.value))} className="w-full h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-emerald-600" /><p className="text-xs text-gray-500 mt-1">Higher sensitivity detects more kale but may increase false positives</p></div>
+                            {/* Motion Detection Toggle */}
+                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200"><div><div className="font-semibold text-gray-900">Motion Detection</div><div className="text-xs text-gray-500">Alert on movement detection</div></div><label className="relative inline-block w-12 h-6"><input type="checkbox" checked={settings.motionDetection} onChange={(e) => handleSettingChange("motionDetection", e.target.checked)} className="sr-only peer" /><div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div></label></div>
+                            {/* Save and Close Buttons */}
+                            <div className="space-y-3 pt-2"><button onClick={handleSaveSettings} className="w-full p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors shadow-lg hover:shadow-xl active:scale-[0.99]">Save Settings</button><button onClick={() => setShowSettings(false)} className="w-full p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close</button></div>
                         </div>
                     </div>
                 </div>
