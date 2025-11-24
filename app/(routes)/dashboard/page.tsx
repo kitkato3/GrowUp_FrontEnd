@@ -238,6 +238,24 @@ export default function Dashboard() {
   const [sensorData, setSensorData] = useState<SensorDataState>(INITIAL_SENSOR_DATA)
   const [alerts, setAlerts] = useState<AlertData[]>([])
 
+  const overallSeverity = alerts.reduce((maxSeverity, alert) => {
+    if (alert.severity === 'high') {
+      return 'high'; // High wins always
+    }
+    if (alert.severity === 'medium' && maxSeverity !== 'high') {
+      return 'medium'; // Medium wins over Low/Info/Optimal
+    }
+    return maxSeverity; // Maintain current max (low or high)
+  }, 'low' as AlertData['severity']); // Default to 'low' (System Running Optimally)
+
+  const getOverallStatus = (severity: AlertData['severity']) => {
+    if (severity === 'high') return { color: 'bg-red-500', text: 'System Critical' };
+    if (severity === 'medium') return { color: 'bg-amber-500', text: 'System Warning' };
+    return { color: 'bg-emerald-500', text: 'System Healthy' };
+  }
+
+  const status = getOverallStatus(overallSeverity);
+
   useEffect(() => {
     if (showControlsModal) setLocalControls({ ...controls })
   }, [showControlsModal, controls])
@@ -246,15 +264,12 @@ export default function Dashboard() {
     const interval = setInterval(() => {
       setCurrentTime(new Date())
 
-      // 1. Gamitin ang setSensorData na may functional update (prev =>)
       setSensorData(prev => {
 
-        // 2. Tiyakin na kumpleto ang lahat ng 10 properties para mag-match sa SensorDataState
         const newSensorData: SensorDataState = {
           waterTemp: Number.parseFloat((22 + Math.random() * 2).toFixed(1)),
           ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
           dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
-          // Gumamit ng 'prev' para sa continuity
           waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
           waterFlow: Number.parseFloat((4.5 + (Math.random() - 0.5) * 0.5).toFixed(1)), // 🌟 IDINAGDAG!
           humidity: Number.parseFloat((60 + Math.random() * 10).toFixed(1)),
@@ -264,7 +279,6 @@ export default function Dashboard() {
           airPressure: Number.parseFloat((1000 + Math.random() * 25).toFixed(1)),
         }
 
-        // 3. I-generate ang Alerts
         setAlerts(generateAlerts(newSensorData, thresholds))
 
         return newSensorData
@@ -272,7 +286,6 @@ export default function Dashboard() {
     }, 3000)
 
     return () => clearInterval(interval)
-    // Dependency sa thresholds para mag-update ang alerts logic kung magbago ang settings
   }, [thresholds])
 
   const handleQuickControlsSave = () => {
@@ -354,10 +367,11 @@ export default function Dashboard() {
 
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse"></div>
-              <div>
-                <div className="font-semibold text-gray-900">System Healthy</div>
+            <div className="flex items-center gap-3"> {/* DYNAMIC COLOR */}
+              <div className={`w-3 h-3 ${status.color} rounded-full animate-pulse`}>
+              </div>
+              <div> {/* DYNAMIC TEXT */}
+                <div className="font-semibold text-gray-900">{status.text}</div>
                 <div className="text-xs text-gray-500">All sensors operational</div>
               </div>
             </div>
