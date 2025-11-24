@@ -112,7 +112,6 @@ const generateAlerts = (
   if (sensor.ammonia > thresholds.ammonia.max) alerts.push({ id: alertId++, type: "warning", severity: "high", title: "Ammonia Level High", message: `Ammonia at ${sensor.ammonia} ppm.`, time: timeAgo(now) })
   // Water Flow Rate
   if (sensor.waterFlow < thresholds.waterFlow.min) alerts.push({ id: alertId++, type: "error", severity: "critical", title: "PUMP ERROR: Water Flow Low", message: `Flow is ${sensor.waterFlow} L/min.`, time: timeAgo(now) })
-  // Note: chemLevel check removed as requested
 
   // Merge with static alerts for full list (only 1, 2, 3)
   const allAlerts = [...alerts, ...ALERTS_DATA.filter(a => a.id >= 1 && a.id <= 3)];
@@ -121,10 +120,6 @@ const generateAlerts = (
   return allAlerts.filter(a => a.severity !== 'low' || a.title !== 'System Running Optimally');
 }
 
-/**
- * Checks overall system status based on generated alerts.
- * If alert list is empty, the system is running optimally.
- */
 const checkSystemStatus = (alerts: AlertData[]): 'Optimal' | 'Alerts Active' => {
   const activeAlerts = alerts.filter(a => a.title !== "System Running Optimally");
   if (activeAlerts.length === 0) {
@@ -370,6 +365,12 @@ export default function Dashboard() {
               <div className="text-center text-white">
                 <Camera className="w-12 h-12 mx-auto mb-2 opacity-60" />
                 <div className="text-sm font-semibold">Live Feed</div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className={`p-4 font-semibold flex items-center gap-2 ${systemStatus === 'Optimal' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                {systemStatus === 'Optimal' ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                <span>System Status: {systemStatus}</span>
               </div>
             </div>
             <div className="absolute top-3 right-3 bg-red-500 w-3 h-3 rounded-full animate-pulse"></div>
