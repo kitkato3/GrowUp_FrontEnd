@@ -204,7 +204,8 @@ export default function Analytics() {
   } as SensorState)
 
   const [selectedRange, setSelectedRange] = useState("thisWeek")
-  const [showFilters, setShowFilters] = useState(false)
+  const [showGrowthFilters, setShowGrowthFilters] = useState(false)
+  const [showSensorFilters, setShowSensorFilters] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
   const [sensorExportRange, setSensorExportRange] = useState("24h")
 
@@ -272,7 +273,7 @@ export default function Analytics() {
   // Define data variables here so they are in scope
   const filteredGrowthData = (() => {
     if (selectedRange === 'customGrowth') {
-      return WEEKLY_GROWTH_DATA.slice(0, 3);
+      return WEEKLY_GROWTH_DATA.slice(0, 5);
     }
 
     switch (selectedRange) {
@@ -293,7 +294,7 @@ export default function Analytics() {
       case '7d':
         return SENSOR_TREND_DATA.filter((_, index) => index % 4 === 0).slice(0, 7);
       case 'custom':
-        return SENSOR_TREND_DATA.slice(4);
+        return SENSOR_TREND_DATA.slice(8);
       case '24h':
       default:
         return SENSOR_TREND_DATA
@@ -309,9 +310,11 @@ export default function Analytics() {
       return;
     }
     if (type === 'growth') {
-      setSelectedRange('customGrowth');
+      setSelectedRange(''); // Force React to see a change
+      setTimeout(() => setSelectedRange('customGrowth'), 0);
     } else {
-      setSensorExportRange('custom');
+      setSensorExportRange(''); // Force React to see a change
+      setTimeout(() => setSensorExportRange('custom'), 0);
     }
   }
   /* EXPORT: Plant Growth CSV */
@@ -473,11 +476,11 @@ export default function Analytics() {
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => setShowFilters(!showFilters)}
+                  onClick={() => setShowGrowthFilters(!showGrowthFilters)}
                   className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium"
                 >
                   <Filter className="w-3.5 h-3.5" />
-                  {showFilters ? "Hide" : "Filters"}
+                  {showGrowthFilters ? "Hide" : "Filters"}
                 </button>
 
                 <button
@@ -491,7 +494,7 @@ export default function Analytics() {
             </div>
 
             {/* Filter Dropdown */}
-            {showFilters && (
+            {showGrowthFilters && (
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 block mb-2">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />
@@ -602,11 +605,11 @@ export default function Analytics() {
 
               <div className="flex gap-2"></div>
               <button
-                onClick={() => setShowFilters(!showFilters)} // Gumamit ng parehong state
+                onClick={() => setShowSensorFilters(!showSensorFilters)} // Gumamit ng parehong state
                 className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium"
               >
                 <Filter className="w-3.5 h-3.5" />
-                {showFilters ? "Hide" : "Filters"}
+                {showSensorFilters ? "Hide" : "Filters"}
               </button>
               <button
                 onClick={exportSensorDataCSV}
@@ -617,7 +620,7 @@ export default function Analytics() {
               </button>
             </div>
 
-            {showFilters && ( // I-wrap sa showFilters
+            {showSensorFilters && ( // I-wrap sa showFilters
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 block mb-2">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />
