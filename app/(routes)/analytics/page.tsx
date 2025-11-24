@@ -273,7 +273,7 @@ export default function Analytics() {
   // Define data variables here so they are in scope
   const filteredGrowthData = (() => {
     if (selectedRange === 'customGrowth') {
-      return WEEKLY_GROWTH_DATA.slice(0, 5);
+      return WEEKLY_GROWTH_DATA.slice(3);
     }
 
     switch (selectedRange) {
@@ -294,7 +294,7 @@ export default function Analytics() {
       case '7d':
         return SENSOR_TREND_DATA.filter((_, index) => index % 4 === 0).slice(0, 7);
       case 'custom':
-        return SENSOR_TREND_DATA.slice(8);
+        return SENSOR_TREND_DATA.slice(12);
       case '24h':
       default:
         return SENSOR_TREND_DATA
@@ -511,22 +511,26 @@ export default function Analytics() {
                   <option value="customGrowth">Custom Range</option>
                 </select>
                 {selectedRange === "customGrowth" && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-700">Select Date Range</p>
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Select Date Range</p>
 
-                    <input
-                      type="date"
-                      value={customGrowthStartDate}
-                      onChange={(e) => handleDateChange('growth', 'start', e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                    />
-                    <input
-                      type="date"
-                      value={customGrowthEndDate}
-                      onChange={(e) => handleDateChange('growth', 'end', e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                    />
-                    {dateWarning && <p className="text-xs text-red-600 font-medium">{dateWarning}</p>}
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        value={customGrowthStartDate}
+                        onChange={(e) => handleDateChange('growth', 'start', e.target.value)}
+                        className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
+                      />
+                      <input
+                        type="date"
+                        value={customGrowthEndDate}
+                        onChange={(e) => handleDateChange('growth', 'end', e.target.value)}
+                        className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    {dateWarning && <p className="text-xs text-red-600 font-medium mt-2">{dateWarning}</p>}
+
+                    {/* BUTTON: Apply Filter */}
                     <button
                       onClick={() => applyCustomDateFilter('growth')}
                       className={`w-full py-1.5 mt-2 text-sm font-semibold rounded-md transition-colors ${dateWarning ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
@@ -534,6 +538,7 @@ export default function Analytics() {
                     >
                       Apply Filter
                     </button>
+
                   </div>
                 )}
               </div>
