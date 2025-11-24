@@ -3,23 +3,19 @@
 import React, { useState, useEffect } from "react"
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts"
 import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, BarChart3, Clock } from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+// Removed Next.js routing imports to fix compilation errors
 
-// Added CurrentView type for state-based navigation
-type CurrentView = 'home' | 'analytics' | 'camera' | 'settings';
-
-// UPDATED: Removed "nitrates" from SensorKey
 type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "humidity" | "ammonia" | "airPressure"
 type SensorState = Record<SensorKey, boolean>
 type SensorTrendRow = { time: string } & Record<SensorKey, number>
+type CurrentView = 'dashboard' | 'analytics' | 'camera' | 'settings'; // Added for state-based navigation
 
 /* MOCK DATA */
 const WEEKLY_GROWTH_DATA = [
   { day: "Mon", height: 12.5, leaves: 8, health: 92 }, { day: "Tue", height: 13.2, leaves: 9, health: 94 }, { day: "Wed", height: 14.1, leaves: 10, health: 95 }, { day: "Thu", height: 15.3, leaves: 11, health: 96 }, { day: "Fri", height: 16.8, leaves: 12, health: 97 }, { day: "Sat", height: 18.2, leaves: 13, health: 98 }, { day: "Sun", height: 19.5, leaves: 14, health: 99 },
 ]
 
-// UPDATED: Removed 'nitrates' data field from all rows
+// Removed 'nitrates' data field from all rows
 const SENSOR_TREND_DATA: SensorTrendRow[] = [
   { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24, lightIntensity: 0, waterLevel: 85, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
   { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
@@ -29,8 +25,7 @@ const SENSOR_TREND_DATA: SensorTrendRow[] = [
   { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
 ]
 
-/* SENSOR CONFIGURATION (UPDATED) */
-// UPDATED: Removed Nitrate entry
+/* SENSOR CONFIGURATION */
 const sensorConfig: { key: SensorKey; name: string; color: string; unit: string; format: (val: number) => string }[] = [
   { key: "waterTemp", name: "Water Temp (DS18B20)", color: "#3b82f6", unit: "°C", format: (v) => v.toFixed(1) },
   { key: "ph", name: "pH Level (PH4502C)", color: "#8b5cf6", unit: "", format: (v) => v.toFixed(1) },
@@ -66,7 +61,7 @@ const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
   window.URL.revokeObjectURL(url)
 }
 
-/* NAVIGATION COMPONENTS (Fixed for functional navigation) */
+/* NAVIGATION COMPONENTS (State-based to fix compilation) */
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -78,27 +73,26 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
   </div>
 );
 
-// UPDATED: Now accepts currentView and setView props
+// UPDATED: State-based navigation component
 const BottomNavigation: React.FC<{ currentView: CurrentView, setView: (view: CurrentView) => void }> = ({ currentView, setView }) => {
   const tabs = [
-    { id: "home", label: "Home", icon: Home },
-    { id: "analytics", label: "Analytics", icon: BarChart3 },
-    { id: "camera", label: "Camera", icon: Camera },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "dashboard", label: "Home", icon: Home, view: 'dashboard' as CurrentView },
+    { id: "analytics", label: "Analytics", icon: BarChart3, view: 'analytics' as CurrentView },
+    { id: "camera", label: "Camera", icon: Camera, view: 'camera' as CurrentView },
+    { id: "settings", label: "Settings", icon: Settings, view: 'settings' as CurrentView },
   ];
 
   return (
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
       <div className="flex items-center justify-around py-3">
         {tabs.map((tab) => {
-          const isActive = tab.id === currentView;
+          const isActive = tab.view === currentView;
           const Icon = tab.icon;
           return (
-            // UPDATED: Using button with onClick for state change
             <button
               key={tab.id}
-              onClick={() => setView(tab.id as CurrentView)}
-              className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all cursor-pointer ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
+              onClick={() => setView(tab.view)}
+              className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
             >
               <Icon className="w-5 h-5 mb-1" />
               <span className="text-xs font-semibold">{tab.label}</span>
@@ -139,39 +133,23 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
   );
 };
 
+// Placeholder content for non-analytics views - NOW RETURNS JSX directly
+const PlaceholderContent: React.FC<{ title: string, subtitle: string, icon: React.ReactNode }> = ({ title, subtitle, icon }) => (
+  <div className="p-8 text-center min-h-[70vh] flex flex-col items-center justify-center">
+    {icon}
+    <h2 className="text-3xl font-bold text-gray-800 mt-4 mb-2">{title}</h2>
+    <p className="text-gray-500">{subtitle}</p>
+  </div>
+);
 
-/* ANALYTICS CONTENT (Extracted for conditional rendering) */
-const AnalyticsContent: React.FC<{
-  selectedSensors: SensorState;
-  setSelectedSensors: React.Dispatch<React.SetStateAction<SensorState>>;
-  selectedRange: string;
-  setSelectedRange: React.Dispatch<React.SetStateAction<string>>;
-  showFilters: boolean;
-  setShowFilters: React.Dispatch<React.SetStateAction<boolean>>;
-  sensorExportRange: string;
-  setSensorExportRange: React.Dispatch<React.SetStateAction<string>>;
-  customGrowthStartDate: string;
-  customGrowthEndDate: string;
-  customSensorStartDate: string;
-  customSensorEndDate: string;
-  dateWarning: string;
-  handleDateChange: (type: 'growth' | 'sensor', key: 'start' | 'end', value: string) => void;
-  exportGrowthDataCSV: () => void;
-  exportSensorDataCSV: () => void;
-  exportAllData: () => void;
-  toggleSensor: (key: SensorKey) => void;
-  selectAllSensors: () => void;
-  deselectAllSensors: () => void;
-  latestSensorReading: SensorTrendRow;
-}> = (props) => {
-  const {
-    selectedSensors, selectedRange, setSelectedRange, showFilters, setShowFilters,
-    sensorExportRange, setSensorExportRange, customGrowthStartDate, customGrowthEndDate,
-    customSensorStartDate, customSensorEndDate, dateWarning, handleDateChange,
-    exportGrowthDataCSV, exportSensorDataCSV, exportAllData, toggleSensor,
-    selectAllSensors, deselectAllSensors, latestSensorReading
-  } = props;
-
+// Extracted Analytics content into its own component for conditional rendering
+const AnalyticsContent: React.FC<any> = ({
+  selectedSensors, setSelectedSensors, selectedRange, setSelectedRange, showFilters, setShowFilters,
+  sensorExportRange, setSensorExportRange, customGrowthStartDate, customGrowthEndDate,
+  customSensorStartDate, customSensorEndDate, dateWarning, handleDateChange,
+  exportGrowthDataCSV, exportSensorDataCSV, exportAllData, toggleSensor,
+  selectAllSensors, deselectAllSensors, latestSensorReading
+}) => {
   const filteredGrowthData =
     selectedRange === "thisWeek" || selectedRange === "customGrowth"
       ? WEEKLY_GROWTH_DATA
@@ -244,16 +222,11 @@ const AnalyticsContent: React.FC<{
               value={selectedRange}
               onChange={(e) => {
                 setSelectedRange(e.target.value);
-                // Clear warning when switching out of custom mode
-                if (e.target.value !== "customGrowth") {
-                  // Clear warning logic is moved to the main component's handleDateChange if needed across tabs
-                }
               }}
             >
               <option value="thisWeek">This Week</option>
               <option value="lastWeek">Last Week</option>
               <option value="twoWeeks">Last 2 Weeks</option>
-              {/* NEW OPTION */}
               <option value="customGrowth">Custom Range (Mock)</option>
             </select>
 
@@ -351,7 +324,7 @@ const AnalyticsContent: React.FC<{
                 setSensorExportRange(e.target.value);
                 // Clear warning when switching out of custom mode
                 if (e.target.value !== "custom") {
-                  // Clear warning logic is moved to the main component's handleDateChange if needed across tabs
+                  setDateWarning("");
                 }
               }}
             >
@@ -509,12 +482,11 @@ const AnalyticsContent: React.FC<{
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 
 /* MAIN COMPONENT */
-
 export default function Analytics() {
   // NEW STATE: View control
   const [view, setView] = useState<CurrentView>('analytics');
@@ -532,7 +504,6 @@ export default function Analytics() {
     airPressure: false,
   } as SensorState)
 
-  // selectedRange controls both chart display and export range for growth
   const [selectedRange, setSelectedRange] = useState("thisWeek")
   const [showFilters, setShowFilters] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -674,6 +645,7 @@ export default function Analytics() {
   }
 
   const latestSensorReading = SENSOR_TREND_DATA[SENSOR_TREND_DATA.length - 1]
+  const activeCount = Object.values(selectedSensors).filter(Boolean).length
 
 
   useEffect(() => {
@@ -683,63 +655,74 @@ export default function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
-  // Placeholder content for non-analytics views
-  const renderOtherContent = (title: string, icon: React.ReactNode) => (
-    <div className="p-8 text-center min-h-[70vh] flex flex-col items-center justify-center">
-      {icon}
-      <h2 className="text-3xl font-bold text-gray-800 mt-4 mb-2">{title}</h2>
-      <p className="text-gray-500">This is a placeholder screen. Switch back to Analytics to view data.</p>
-    </div>
-  );
+  // Config map to hold titles and descriptions for navigation views
+  const VIEWS_CONFIG = {
+    'dashboard': {
+      title: 'Home Dashboard',
+      subtitle: 'This is the main screen for quick system status overview.',
+      icon: <Home className="w-16 h-16 text-emerald-500" />
+    },
+    'camera': {
+      title: 'Camera Feed & Controls',
+      subtitle: 'Access live video and take snapshots of your growing system.',
+      icon: <Camera className="w-16 h-16 text-blue-500" />
+    },
+    'settings': {
+      title: 'System Settings',
+      subtitle: 'Configure alerts, sensor calibration, and environment controls.',
+      icon: <Settings className="w-16 h-16 text-orange-500" />
+    },
+    'analytics': {
+      title: 'Analytics Dashboard',
+      subtitle: 'Monitor your aquaponics system performance.'
+    },
+  };
 
   const renderContent = () => {
-    switch (view) {
-      case 'home':
-        return renderOtherContent(
-          'Home Dashboard',
-          <Home className="w-16 h-16 text-emerald-500" />
-        );
-      case 'camera':
-        return renderOtherContent(
-          'Camera Feed & Controls',
-          <Camera className="w-16 h-16 text-blue-500" />
-        );
-      case 'settings':
-        return renderOtherContent(
-          'System Settings',
-          <Settings className="w-16 h-16 text-orange-500" />
-        );
-      case 'analytics':
-      default:
-        return (
-          <AnalyticsContent
-            selectedSensors={selectedSensors}
-            setSelectedSensors={setSelectedSensors}
-            selectedRange={selectedRange}
-            setSelectedRange={setSelectedRange}
-            showFilters={showFilters}
-            setShowFilters={setShowFilters}
-            sensorExportRange={sensorExportRange}
-            setSensorExportRange={setSensorExportRange}
-            customGrowthStartDate={customGrowthStartDate}
-            customGrowthEndDate={customGrowthEndDate}
-            customSensorStartDate={customSensorStartDate}
-            customSensorEndDate={customSensorEndDate}
-            dateWarning={dateWarning}
-            handleDateChange={handleDateChange}
-            exportGrowthDataCSV={exportGrowthDataCSV}
-            exportSensorDataCSV={exportSensorDataCSV}
-            exportAllData={exportAllData}
-            toggleSensor={toggleSensor}
-            selectAllSensors={selectAllSensors}
-            deselectAllSensors={deselectAllSensors}
-            latestSensorReading={latestSensorReading}
-          />
-        );
+    const config = VIEWS_CONFIG[view] || VIEWS_CONFIG['analytics'];
+
+    if (view === 'analytics') {
+      return (
+        <AnalyticsContent
+          selectedSensors={selectedSensors}
+          setSelectedSensors={setSelectedSensors}
+          selectedRange={selectedRange}
+          setSelectedRange={setSelectedRange}
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          sensorExportRange={sensorExportRange}
+          setSensorExportRange={setSensorExportRange}
+          customGrowthStartDate={customGrowthStartDate}
+          customGrowthEndDate={customGrowthEndDate}
+          customSensorStartDate={customSensorStartDate}
+          customSensorEndDate={customSensorEndDate}
+          dateWarning={dateWarning}
+          handleDateChange={handleDateChange}
+          exportGrowthDataCSV={exportGrowthDataCSV}
+          exportSensorDataCSV={exportSensorDataCSV}
+          exportAllData={exportAllData}
+          toggleSensor={toggleSensor}
+          selectAllSensors={selectAllSensors}
+          deselectAllSensors={deselectAllSensors}
+          latestSensorReading={latestSensorReading}
+        />
+      );
+    } else {
+      // Render Placeholder using the config data
+      return (
+        <PlaceholderContent
+          title={config.title}
+          subtitle={config.subtitle}
+          icon={config.icon}
+        />
+      );
     }
   }
 
+
   /* RENDER */
+  const currentConfig = VIEWS_CONFIG[view] || VIEWS_CONFIG['analytics'];
+
   return (
     <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
       <Navbar time={currentTime.toLocaleTimeString()} />
@@ -747,10 +730,10 @@ export default function Analytics() {
       <div className="px-4 py-5 pb-24">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900">
-            {view === 'analytics' ? 'Analytics Dashboard' : renderContent().props.title}
+            {currentConfig.title}
           </h1>
           <p className="text-gray-600 mt-1">
-            {view === 'analytics' ? 'Monitor your aquaponics system performance' : 'Navigation Placeholder'}
+            {currentConfig.subtitle}
           </p>
         </div>
         {renderContent()}
