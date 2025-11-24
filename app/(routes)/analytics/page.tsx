@@ -558,6 +558,14 @@ export default function Analytics() {
             <div className="flex justify-between mb-4">
               <h3 className="font-bold text-gray-900">24-Hour Sensor Trends</h3>
 
+              <div className="flex gap-2"></div>
+              <button
+                onClick={() => setShowFilters(!showFilters)} // Gumamit ng parehong state
+                className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium"
+              >
+                <Filter className="w-3.5 h-3.5" />
+                {showFilters ? "Hide" : "Filters"}
+              </button>
               <button
                 onClick={exportSensorDataCSV}
                 className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-medium"
@@ -567,45 +575,51 @@ export default function Analytics() {
               </button>
             </div>
 
-            {/* Custom Range Dropdown (was implicitly missing handling) */}
-            <div className="flex justify-end items-center mb-4">
-              <select
-                className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 mr-2"
-                value={sensorExportRange}
-                onChange={(e) => {
-                  setSensorExportRange(e.target.value);
-                  if (e.target.value !== "custom") {
-                    setDateWarning("");
-                  }
-                }}
-              >
-                <option value="24h">Last 24 Hours</option>
-                <option value="48h">Last 48 Hours</option>
-                <option value="7d">Last 7 Days</option>
-                <option value="custom">Custom Range</option>
-              </select>
-            </div>
-            {sensorExportRange === "custom" && (
+            {showFilters && ( // I-wrap sa showFilters
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-xs font-semibold text-gray-700 mb-2">Select Date Range</p>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={customSensorStartDate}
-                    onChange={(e) => handleDateChange('sensor', 'start', e.target.value)}
-                    className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
-                  />
-                  <input
-                    type="date"
-                    value={customSensorEndDate}
-                    onChange={(e) => handleDateChange('sensor', 'end', e.target.value)}
-                    className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
-                  />
-                </div>
-                {dateWarning && <p className="text-xs text-red-600 font-medium mt-2">{dateWarning}</p>}
+                <label className="text-xs font-semibold text-gray-700 block mb-2">
+                  <Calendar className="w-3.5 h-3.5 inline mr-1" />
+                  Time Period (Chart Display & Export Range)
+                </label>
+
+                <select
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={sensorExportRange}
+                  onChange={(e) => {
+                    setSensorExportRange(e.target.value);
+                    if (e.target.value !== "custom") {
+                      setDateWarning("");
+                    }
+                  }}
+                >
+                  <option value="24h">Last 24 Hours</option>
+                  <option value="48h">Last 48 Hours</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="custom">Custom Range (Mock)</option>
+                </select>
+
+                {sensorExportRange === "custom" && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-gray-700 mb-2">Select Date Range</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="date"
+                        value={customSensorStartDate}
+                        onChange={(e) => handleDateChange('sensor', 'start', e.target.value)}
+                        className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
+                      />
+                      <input
+                        type="date"
+                        value={customSensorEndDate}
+                        onChange={(e) => handleDateChange('sensor', 'end', e.target.value)}
+                        className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
+                      />
+                    </div>
+                    {dateWarning && <p className="text-xs text-red-600 font-medium mt-2">{dateWarning}</p>}
+                  </div>
+                )}
               </div>
             )}
-
 
             {/* Quick Select Buttons */}
             <div className="flex gap-2 mb-3">
