@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react"
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts"
 import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, BarChart3, Clock } from "lucide-react"
+// Removed: import Link from "next/link"
+// Removed: import { usePathname } from "next/navigation"
 
 type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "nitrates" | "humidity" | "ammonia" | "airPressure"
 type SensorState = Record<SensorKey, boolean>
@@ -33,7 +35,7 @@ const sensorConfig: { key: SensorKey; name: string; color: string; unit: string;
   { key: "waterLevel", name: "Water Level (HC SR04)", color: "#06b6d4", unit: "%", format: (v) => v.toFixed(0) },
   { key: "waterFlow", name: "Flow Rate (YF-S201)", color: "#6366f1", unit: "L/min", format: (v) => v.toFixed(0) },
   { key: "ammonia", name: "Ammonia (MQ137)", color: "#f97316", unit: "ppm", format: (v) => v.toFixed(2) },
-  { key: "nitrates", name: "Nitrate (Mock)", color: "#ec4899", unit: "ppm", format: (v) => v.toFixed(0) },
+  { key: "nitrates", name: "Nitrate (Mock)", color: "#ec4899", unit: "ppm", format: (v) => v.toFixed(0) }, // Mocked sensor (not listed by user)
 ]
 
 /* UTILITY FUNCTIONS */
@@ -71,6 +73,7 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
 );
 
 const BottomNavigation = () => {
+  // Mock tabs and highlight 'Analytics' since this is the component displayed
   const tabs = [
     { id: "dashboard", label: "Home", icon: Home },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -82,11 +85,13 @@ const BottomNavigation = () => {
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
       <div className="flex items-center justify-around py-3">
         {tabs.map((tab) => {
+          // Hardcode 'analytics' as active view
           const isActive = tab.id === "analytics";
           const Icon = tab.icon;
           return (
             <div
               key={tab.id}
+              // Using div/button as placeholder since routing logic is missing/unnecessary here
               className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all cursor-pointer ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
             >
               <Icon className="w-5 h-5 mb-1" />
@@ -99,8 +104,9 @@ const BottomNavigation = () => {
   );
 };
 
-/* Sensor Readings Table Component */
+/* NEW FEATURE: Sensor Readings Table Component */
 const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestData }) => {
+  // Only display the first 6 most critical sensors in the table
   const displayConfig = sensorConfig.slice(0, 6);
 
   return (
@@ -116,6 +122,7 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
             key={sensor.key}
             className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between"
           >
+            {/* Removing sensor module name from display for cleaner UI */}
             <span className="text-xs font-medium text-gray-700">{sensor.name.split('(')[0].trim()}</span>
             <span className="text-sm font-bold" style={{ color: sensor.color }}>
               {sensor.format(latestData[sensor.key])} {sensor.unit}
@@ -146,12 +153,15 @@ export default function Analytics() {
     airPressure: false,
   })
 
+  // selectedRange now controls both chart display and export range for growth
   const [selectedRange, setSelectedRange] = useState("thisWeek")
   const [showFilters, setShowFilters] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+  // NEW STATE for Custom Export Range
   const [sensorExportRange, setSensorExportRange] = useState("24h")
 
 
+  /* Filter Growth Data (Updated to treat 'customGrowth' as default mock data) */
   const filteredGrowthData =
     selectedRange === "thisWeek" || selectedRange === "customGrowth"
       ? WEEKLY_GROWTH_DATA
@@ -161,9 +171,12 @@ export default function Analytics() {
 
   /* EXPORT: Plant Growth CSV (Updated to use selectedRange for filename) */
   const exportGrowthDataCSV = () => {
+    // Use selectedRange (including 'customGrowth') for filename
     const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
     const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"]
 
+    // In a real system, the backend would use `selectedRange` to fetch the specific data.
+    // Here, we export the data currently visible on the chart.
     const rows = filteredGrowthData.map((d) => [
       d.day,
       d.height,
@@ -185,10 +198,13 @@ export default function Analytics() {
       sensorConfig.find(s => s.key === k)?.name || k
     )]
 
+    // Mock data filtering based on sensorExportRange (currently SENSOR_TREND_DATA is 24h mock)
     let exportedData = SENSOR_TREND_DATA;
     if (sensorExportRange === "48h") {
+      // Mocking double the data for 48h export
       exportedData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA.map(d => ({ ...d, time: `Day2 ${d.time}` }))];
     } else if (sensorExportRange === "7d") {
+      // Mocking a long list of data for 7 days
       exportedData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
     }
 
@@ -341,6 +357,7 @@ export default function Analytics() {
                   <option value="thisWeek">This Week</option>
                   <option value="lastWeek">Last Week</option>
                   <option value="twoWeeks">Last 2 Weeks</option>
+                  {/* NEW OPTION */}
                   <option value="customGrowth">Custom Range (Mock)</option>
                 </select>
               </div>
@@ -512,7 +529,7 @@ export default function Analytics() {
                         stroke={sensor.color}
                         strokeWidth={2.5}
                         dot={false}
-                        name={sensor.name.split('(')[0].trim()}
+                        name={sensor.name.split('(')[0].trim()} // Clean name for legend
                         activeDot={{ r: 5 }}
                       />
                     )
