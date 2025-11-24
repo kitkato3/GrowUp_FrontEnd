@@ -60,6 +60,8 @@ const SETTINGS_MOCK_SENSOR_DATA: SensorDataState = {
   waterFlow: 10.0,
   humidity: 60.0,
   lightIntensity: 1000.0,
+  waterLevel: 85,
+  airPressure: 1012.0
 };
 
 // --- INITIAL STATE & HOOKS ---
@@ -243,7 +245,7 @@ export default function Dashboard() {
   // ... (sa loob ng Dashboard component)
 
   // ADDED: Calculate System Status
-  const minimalSensorData: MinimalSensorData = {
+  const mockSensorDataForStatus: SensorDataState = {
     waterTemp: SETTINGS_MOCK_SENSOR_DATA.waterTemp,
     ph: SETTINGS_MOCK_SENSOR_DATA.ph,
     dissolvedO2: SETTINGS_MOCK_SENSOR_DATA.dissolvedO2,
@@ -252,15 +254,13 @@ export default function Dashboard() {
     waterFlow: SETTINGS_MOCK_SENSOR_DATA.waterFlow,
     humidity: SETTINGS_MOCK_SENSOR_DATA.humidity,
     lightIntensity: SETTINGS_MOCK_SENSOR_DATA.lightIntensity,
-    waterLevel: INITIAL_SENSOR_DATA.waterLevel,
-    airPressure: INITIAL_SENSOR_DATA.airPressure,
+    waterLevel: SETTINGS_MOCK_SENSOR_DATA.waterLevel,
+    airPressure: SETTINGS_MOCK_SENSOR_DATA.airPressure,
   }
-
-  const dynamicAlerts = generateAlerts(minimalSensorData, thresholds as FullThresholdState); // Alerts based on live data
+  const dynamicAlerts = generateAlerts(mockSensorDataForStatus, thresholds);
   const systemStatus = checkSystemStatus(dynamicAlerts); // Status based on live alerts
 
-  // The original ALERTS_DATA is used here to match the image
-  const alerts = ALERTS_DATA;
+  const alerts = dynamicAlerts;
 
   useEffect(() => {
     if (showControlsModal) setLocalControls({ ...controls })
