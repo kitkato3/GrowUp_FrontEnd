@@ -30,7 +30,6 @@ interface SensorDataState {
   airTemp: number;
   waterFlow: number;
   airHumidity: number;
-  chemLevel: number;
   lightIntensity: number;
 }
 
@@ -53,7 +52,6 @@ interface ThresholdState {
   airTemp: { min: number; max: number };
   waterFlow: { min: number; max: number }; // For Submersible Pump
   airHumidity: { min: number; max: number }; // For DC Fan (relative humidity)
-  chemLevel: { min: number; max: number }; // For pH Adjustment (chemical volume)
   lightIntensity: { min: number; max: number }; // For Grow Light
 }
 interface ControlToggleProps { label: string; description: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
@@ -81,7 +79,6 @@ const INITIAL_THRESHOLDS: ThresholdState = {
   airTemp: { min: 22, max: 28 },
   waterFlow: { min: 8, max: 12 },
   airHumidity: { min: 50, max: 70 },
-  chemLevel: { min: 20, max: 100 },
   lightIntensity: { min: 500, max: 1500 },
 }
 
@@ -92,7 +89,6 @@ const localStorageKey = 'aquaponics_settings_state';
 // Convert time to human-readable
 const timeAgo = (date: Date) => {
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
-
   if (seconds < 60) return "Just now"
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return `${minutes} min ago`
@@ -100,20 +96,13 @@ const timeAgo = (date: Date) => {
   return `${hours} hrs ago`
 }
 
-// Generate alerts based on live sensor values
 const generateAlerts = (
   sensor: SensorDataState,
-  // Kailangan nating i-include ang lahat ng bagong threshold keys dito
-  thresholds: ThresholdState & {
-    waterFlow?: { min: number; max: number };
-    airHumidity?: { min: number; max: number };
-    chemLevel?: { min: number; max: number };
-    lightIntensity?: { min: number; max: number };
-  }
+  thresholds: ThresholdState
 ): AlertData[] => {
   const now = new Date()
   const alerts: AlertData[] = []
-  let alertId = 10; // Start ID from 10, following existing IDs 1-9
+  let alertId = 10;
 
   // --- Water Temperature (EXISTING) ---
   if (sensor.waterTemp < thresholds.waterTemp.min) {
@@ -209,16 +198,6 @@ const generateAlerts = (
       alerts.push({
         id: alertId++, type: "warning", severity: "low", title: "Air Humidity Low",
         message: `Humidity is ${sensor.airHumidity}%. Risk of plant dehydration.`, time: timeAgo(now),
-      })
-    }
-  }
-
-  // --- pH Chemical Level (pH Adjustment Control) ---
-  if (thresholds.chemLevel && sensor.chemLevel !== undefined) {
-    if (sensor.chemLevel < thresholds.chemLevel.min) {
-      alerts.push({
-        id: alertId++, type: "error", severity: "critical", title: "Chemical Stock Low",
-        message: `pH Adjustment chemical level is ${sensor.chemLevel}% full. Refill immediately to prevent pH drift.`, time: timeAgo(now),
       })
     }
   }
@@ -513,7 +492,6 @@ export default function SettingsPage() {
     airTemp: 25.0,
     waterFlow: 10.0,
     airHumidity: 60.0,
-    chemLevel: 80.0,
     lightIntensity: 1000.0,
   };
 
@@ -548,7 +526,6 @@ export default function SettingsPage() {
           airTemp: { min: 22.0, max: 28.0 },
           waterFlow: { min: 8.0, max: 12.0 },
           airHumidity: { min: 50.0, max: 70.0 },
-          chemLevel: { min: 25.0, max: 100.0 },
           lightIntensity: { min: 800.0, max: 1500.0 }
         }
         break
@@ -563,7 +540,6 @@ export default function SettingsPage() {
           airTemp: { min: 24.0, max: 26.0 },
           waterFlow: { min: 10.0, max: 15.0 },
           airHumidity: { min: 60.0, max: 80.0 },
-          chemLevel: { min: 50.0, max: 100.0 },
           lightIntensity: { min: 1800.0, max: 2500.0 }
         }
         break
@@ -578,7 +554,6 @@ export default function SettingsPage() {
           airTemp: { min: 20.0, max: 30.0 },
           waterFlow: { min: 5.0, max: 10.0 },
           airHumidity: { min: 40.0, max: 70.0 },
-          chemLevel: { min: 10.0, max: 100.0 },
           lightIntensity: { min: 300.0, max: 800.0 }
         }
         break
@@ -593,7 +568,6 @@ export default function SettingsPage() {
           airTemp: { min: 22.0, max: 28.0 },
           waterFlow: { min: 0.0, max: 1.0 },
           airHumidity: { min: 40.0, max: 80.0 },
-          chemLevel: { min: 10.0, max: 100.0 },
           lightIntensity: { min: 0.0, max: 100.0 }
         }
         break
@@ -751,17 +725,6 @@ export default function SettingsPage() {
                 maxLimit={90}
                 onMinChange={(val) => handleThresholdChange('airHumidity', 'min', val)}
                 onMaxChange={(val) => handleThresholdChange('airHumidity', 'max', val)}
-              />
-              <ThresholdRangeInput
-                label="pH Chemical Level"
-                unit="% Full"
-                icon={AlertTriangle}
-                minValue={thresholds.chemLevel.min}
-                maxValue={thresholds.chemLevel.max}
-                minLimit={10}
-                maxLimit={100}
-                onMinChange={(val) => handleThresholdChange('chemLevel', 'min', val)}
-                onMaxChange={(val) => handleThresholdChange('chemLevel', 'max', val)}
               />
               <ThresholdRangeInput
                 label="Grow Light Intensity"

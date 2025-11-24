@@ -23,8 +23,14 @@ interface SensorDataState {
   airTemp: number;
   airPressure: number;
 }
-interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string; }
+interface AlertData { id: number; type: "warning" | "info" | "error"; severity: "low" | "medium" | "high" | "critical"; title: string; message: string; time: string; }
 interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
+
+interface MinimalSensorData { waterTemp: number; ph: number; dissolvedO2: number; ammonia: number; airTemp: number; waterFlow: number; humidity: number; lightIntensity: number; }
+interface FullThresholdState {
+  waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number };
+  airTemp: { min: number; max: number }; waterFlow: { min: number; max: number }; airHumidity: { min: number; max: number }; lightIntensity: { min: number; max: number };
+}
 
 const ALERTS_DATA: AlertData[] = [
   { id: 1, type: "warning", severity: "medium", title: "pH Level Slightly Low", message: "Current pH is 6.2. Consider adjusting pH levels to maintain optimal plant growth.", time: "5 minutes ago" },
@@ -47,10 +53,12 @@ const INITIAL_SENSOR_DATA: SensorDataState = {
 
 // --- INITIAL STATE & HOOKS ---
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
-const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 } }
+const INITIAL_THRESHOLDS: FullThresholdState = {
+  waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 },
+  airTemp: { min: 22, max: 28 }, waterFlow: { min: 8, max: 12 }, airHumidity: { min: 50, max: 70 }, lightIntensity: { min: 500, max: 1500 },
+}
 const localStorageKey = 'aquaponics_settings_state';
-const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
-
+const loadState = (): { controls: SystemControls, activePreset: string, thresholds: FullThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
 const useAquaponicsSettings = () => {
   const [state, setState] = useState(loadState);
 
@@ -75,7 +83,55 @@ const useAquaponicsSettings = () => {
   return { controls: state.controls, quickSaveControls, activePreset: state.activePreset, thresholds: state.thresholds }
 }
 
+// ADDED: Dynamic Alert Generation Logic
+const timeAgo = (date: Date) => {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000)
+  if (seconds < 60) return "Just now"
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  return `${hours} hrs ago`
+}
 
+const generateAlerts = (
+  sensor: MinimalSensorData,
+  thresholds: FullThresholdState
+): AlertData[] => {
+  const now = new Date()
+  const alerts: AlertData[] = []
+  let alertId = 10;
+
+  // Simplified, focusing on critical values based on `settings` logic
+  // Water Temperature
+  if (sensor.waterTemp < thresholds.waterTemp.min || sensor.waterTemp > thresholds.waterTemp.max) alerts.push({ id: alertId++, type: "warning", severity: "medium", title: "Water Temperature Issue", message: `Current water temp is ${sensor.waterTemp}°C.`, time: timeAgo(now) })
+  // pH Level
+  if (sensor.ph < thresholds.ph.min || sensor.ph > thresholds.ph.max) alerts.push({ id: alertId++, type: "warning", severity: "medium", title: "pH Level Issue", message: `Current pH is ${sensor.ph}.`, time: timeAgo(now) })
+  // Dissolved Oxygen
+  if (sensor.dissolvedO2 < thresholds.dissolvedO2.min) alerts.push({ id: alertId++, type: "warning", severity: "high", title: "Dissolved Oxygen Low", message: `DO is ${sensor.dissolvedO2} mg/L.`, time: timeAgo(now) })
+  // Ammonia
+  if (sensor.ammonia > thresholds.ammonia.max) alerts.push({ id: alertId++, type: "warning", severity: "high", title: "Ammonia Level High", message: `Ammonia at ${sensor.ammonia} ppm.`, time: timeAgo(now) })
+  // Water Flow Rate
+  if (sensor.waterFlow < thresholds.waterFlow.min) alerts.push({ id: alertId++, type: "error", severity: "critical", title: "PUMP ERROR: Water Flow Low", message: `Flow is ${sensor.waterFlow} L/min.`, time: timeAgo(now) })
+  // Note: chemLevel check removed as requested
+
+  // Merge with static alerts for full list (only 1, 2, 3)
+  const allAlerts = [...alerts, ...ALERTS_DATA.filter(a => a.id >= 1 && a.id <= 3)];
+
+  // Return only alerts that triggered and the non-optimal static ones
+  return allAlerts.filter(a => a.severity !== 'low' || a.title !== 'System Running Optimally');
+}
+
+/**
+ * Checks overall system status based on generated alerts.
+ * If alert list is empty, the system is running optimally.
+ */
+const checkSystemStatus = (alerts: AlertData[]): 'Optimal' | 'Alerts Active' => {
+  const activeAlerts = alerts.filter(a => a.title !== "System Running Optimally");
+  if (activeAlerts.length === 0) {
+    return 'Optimal';
+  }
+  return 'Alerts Active';
+};
 type ThresholdStatus = "good" | "warning" | "critical"
 const getThresholdStatus = (value: number, min: number, max: number): ThresholdStatus => {
   if (value < min || value > max) return "critical"
@@ -170,14 +226,32 @@ const ControlToggle: React.FC<ControlToggleProps> = ({ label, icon: Icon, active
 
 // --- DASHBOARD COMPONENT ---
 export default function Dashboard() {
-  const { controls, quickSaveControls } = useAquaponicsSettings()
+  const { controls, quickSaveControls, thresholds } = useAquaponicsSettings()
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
   const [expandedAlert, setExpandedAlert] = useState<number | null>(null)
   const [showControlsModal, setShowControlsModal] = useState<boolean>(false)
   const [showCameraModal, setShowCameraModal] = useState<boolean>(false)
   const [localControls, setLocalControls] = useState<ControlState>({ ...controls })
   const [sensorData, setSensorData] = useState<SensorDataState>(INITIAL_SENSOR_DATA)
-  const alerts = ALERTS_DATA
+
+  // ADDED: Calculate System Status
+  // Mocked chemLevel and lightIntensity for Alert Generation on Home Screen
+  const minimalSensorData: MinimalSensorData = {
+    waterTemp: sensorData.waterTemp,
+    ph: sensorData.ph,
+    dissolvedO2: sensorData.dissolvedO2,
+    ammonia: sensorData.ammonia,
+    airTemp: sensorData.airTemp,
+    waterFlow: sensorData.waterFlow,
+    humidity: sensorData.humidity,
+    lightIntensity: 1000.0, // Mocked value
+  }
+
+  const dynamicAlerts = generateAlerts(minimalSensorData, thresholds as FullThresholdState);
+  const systemStatus = checkSystemStatus(dynamicAlerts);
+
+  // The original ALERTS_DATA is used here to match the image
+  const alerts = ALERTS_DATA;
 
   useEffect(() => {
     if (showControlsModal) setLocalControls({ ...controls })
