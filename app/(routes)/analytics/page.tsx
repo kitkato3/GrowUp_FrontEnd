@@ -1,10 +1,6 @@
-"use client"
-
 import React, { useState, useEffect } from "react"
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts"
 import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, BarChart3, Clock } from "lucide-react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
 
 type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "nitrates" | "humidity" | "ammonia" | "airPressure"
 type SensorState = Record<SensorKey, boolean>
@@ -23,6 +19,21 @@ const SENSOR_TREND_DATA: SensorTrendRow[] = [
   { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29, lightIntensity: 850, waterLevel: 82, waterFlow: 13, nitrates: 17, humidity: 58, ammonia: 0.03, airPressure: 1013.8 },
   { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28, lightIntensity: 620, waterLevel: 81, waterFlow: 12, nitrates: 18, humidity: 60, ammonia: 0.02, airPressure: 1011.0 },
   { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25, lightIntensity: 120, waterLevel: 82, waterFlow: 12, nitrates: 16, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
+]
+
+/* SENSOR CONFIGURATION (UPDATED) */
+const sensorConfig: { key: SensorKey; name: string; color: string; unit: string; format: (val: number) => string }[] = [
+  { key: "waterTemp", name: "Water Temp (DS18B20)", color: "#3b82f6", unit: "°C", format: (v) => v.toFixed(1) },
+  { key: "ph", name: "pH Level (PH4502C)", color: "#8b5cf6", unit: "", format: (v) => v.toFixed(1) },
+  { key: "dissolvedO2", name: "Dissolved O₂ (DO Sensor)", color: "#10b981", unit: "mg/L", format: (v) => v.toFixed(1) },
+  { key: "airTemp", name: "Air Temp (BME280)", color: "#f59e0b", unit: "°C", format: (v) => v.toFixed(0) },
+  { key: "lightIntensity", name: "Light (BH1750)", color: "#eab308", unit: "lux", format: (v) => v.toFixed(0) },
+  { key: "humidity", name: "Humidity (BME280)", color: "#14b8a6", unit: "%", format: (v) => v.toFixed(0) },
+  { key: "airPressure", name: "Air Pressure (BME280)", color: "#ef4444", unit: "hPa", format: (v) => v.toFixed(1) },
+  { key: "waterLevel", name: "Water Level (HC SR04)", color: "#06b6d4", unit: "%", format: (v) => v.toFixed(0) },
+  { key: "waterFlow", name: "Flow Rate (YF-S201)", color: "#6366f1", unit: "L/min", format: (v) => v.toFixed(0) },
+  { key: "ammonia", name: "Ammonia (MQ137)", color: "#f97316", unit: "ppm", format: (v) => v.toFixed(2) },
+  { key: "nitrates", name: "Nitrate (Mock)", color: "#ec4899", unit: "ppm", format: (v) => v.toFixed(0) },
 ]
 
 /* UTILITY FUNCTIONS */
@@ -47,7 +58,7 @@ const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
   window.URL.revokeObjectURL(url)
 }
 
-/* NAVIGATION COMPONENTS */
+/* NAVIGATION COMPONENTS (Fixed for standalone use) */
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -60,31 +71,63 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
 );
 
 const BottomNavigation = () => {
-  const pathname = usePathname();
   const tabs = [
-    { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
-    { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
-    { id: "camera", label: "Camera", href: "/camera", icon: Camera },
-    { id: "settings", label: "Settings", href: "/settings", icon: Settings },
+    { id: "dashboard", label: "Home", icon: Home },
+    { id: "analytics", label: "Analytics", icon: BarChart3 },
+    { id: "camera", label: "Camera", icon: Camera },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
       <div className="flex items-center justify-around py-3">
         {tabs.map((tab) => {
-          const isActive = pathname.startsWith(tab.href);
+          const isActive = tab.id === "analytics";
           const Icon = tab.icon;
           return (
-            <Link key={tab.id} href={tab.href} className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}>
+            <div
+              key={tab.id}
+              className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all cursor-pointer ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
+            >
               <Icon className="w-5 h-5 mb-1" />
               <span className="text-xs font-semibold">{tab.label}</span>
-            </Link>
+            </div>
           );
         })}
       </div>
     </div>
   );
 };
+
+/* Sensor Readings Table Component */
+const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestData }) => {
+  const displayConfig = sensorConfig.slice(0, 6);
+
+  return (
+    <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+      <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2 flex items-center gap-2">
+        <Clock className="w-5 h-5 text-gray-500" />
+        Live Sensor Readings <span className="text-xs font-normal text-gray-500 ml-auto">@ {latestData.time}</span>
+      </h3>
+
+      <div className="grid grid-cols-2 gap-3">
+        {displayConfig.map((sensor) => (
+          <div
+            key={sensor.key}
+            className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between"
+          >
+            <span className="text-xs font-medium text-gray-700">{sensor.name.split('(')[0].trim()}</span>
+            <span className="text-sm font-bold" style={{ color: sensor.color }}>
+              {sensor.format(latestData[sensor.key])} {sensor.unit}
+            </span>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-gray-500 mt-3 text-center">Tap "Sensor Trends" below for full list & history.</p>
+    </div>
+  );
+};
+
 
 /* MAIN COMPONENT */
 
@@ -106,20 +149,21 @@ export default function Analytics() {
   const [selectedRange, setSelectedRange] = useState("thisWeek")
   const [showFilters, setShowFilters] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const [sensorExportRange, setSensorExportRange] = useState("24h")
 
 
-  /* Filter Growth Data */
   const filteredGrowthData =
-    selectedRange === "thisWeek"
+    selectedRange === "thisWeek" || selectedRange === "customGrowth"
       ? WEEKLY_GROWTH_DATA
       : selectedRange === "lastWeek"
         ? WEEKLY_GROWTH_DATA.slice(1)
         : WEEKLY_GROWTH_DATA.slice(2)
 
-  /* EXPORT: Plant Growth CSV */
+  /* EXPORT: Plant Growth CSV (Updated to use selectedRange for filename) */
   const exportGrowthDataCSV = () => {
     const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
     const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"]
+
     const rows = filteredGrowthData.map((d) => [
       d.day,
       d.height,
@@ -130,17 +174,26 @@ export default function Analytics() {
     downloadCSV(filename, headers, rows)
   }
 
-  /* EXPORT: Sensor CSV (Only Selected) */
+  /* UPDATED: EXPORT Sensor CSV (Handles Export Range) */
   const exportSensorDataCSV = () => {
     const activeKeys = Object.entries(selectedSensors)
       .filter(([_, isActive]) => isActive)
       .map(([key]) => key as SensorKey)
 
-    const filename = `sensor_data_${formatDate()}.csv`
+    const filename = `sensor_data_${sensorExportRange}_${formatDate()}.csv`
     const headers = ["Time", ...activeKeys.map(k =>
       sensorConfig.find(s => s.key === k)?.name || k
     )]
-    const rows = SENSOR_TREND_DATA.map((entry) => [
+
+    let exportedData = SENSOR_TREND_DATA;
+    if (sensorExportRange === "48h") {
+      exportedData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA.map(d => ({ ...d, time: `Day2 ${d.time}` }))];
+    } else if (sensorExportRange === "7d") {
+      exportedData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
+    }
+
+
+    const rows = exportedData.map((entry) => [
       entry.time,
       ...activeKeys.map((key) => entry[key])
     ])
@@ -182,21 +235,6 @@ export default function Analytics() {
     downloadCSV(filename, headers, [...growthRows, [""], ...sensorRows])
   }
 
-  /* Sensor Configuration */
-  const sensorConfig: { key: SensorKey; name: string; color: string }[] = [
-    { key: "waterTemp", name: "Water Temp (°C)", color: "#3b82f6" },
-    { key: "ph", name: "pH Level", color: "#8b5cf6" },
-    { key: "dissolvedO2", name: "Dissolved O₂", color: "#10b981" },
-    { key: "airTemp", name: "Air Temp (°C)", color: "#f59e0b" },
-    { key: "lightIntensity", name: "Light (lux)", color: "#eab308" },
-    { key: "humidity", name: "Humidity (%)", color: "#14b8a6" },
-    { key: "airPressure", name: "Air Pressure (hPa)", color: "#ef4444" },
-    { key: "waterLevel", name: "Water Level (%)", color: "#06b6d4" },
-    { key: "waterFlow", name: "Flow Rate (L/min)", color: "#6366f1" },
-    { key: "ammonia", name: "Ammonia (ppm)", color: "#f97316" },
-    { key: "nitrates", name: "Nitrate (ppm)", color: "#ec4899" },
-  ]
-
   const toggleSensor = (key: SensorKey) => {
     setSelectedSensors(prev => ({ ...prev, [key]: !prev[key] }))
   }
@@ -218,6 +256,7 @@ export default function Analytics() {
   }
 
   const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
+  const latestSensorReading = SENSOR_TREND_DATA[SENSOR_TREND_DATA.length - 1]
   const activeCount = Object.values(selectedSensors).filter(Boolean).length
 
   useEffect(() => {
@@ -239,6 +278,9 @@ export default function Analytics() {
         </div>
 
         <div className="space-y-5">
+
+          {/* 1. Live Sensor Readings Table */}
+          <SensorReadingsTable latestData={latestSensorReading} />
 
           {/* EXPORT ALL BUTTON */}
           <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-2xl p-4 border border-emerald-200">
@@ -284,12 +326,12 @@ export default function Analytics() {
               </div>
             </div>
 
-            {/* Filter Dropdown */}
+            {/* Filter Dropdown (Updated with Custom Range) */}
             {showFilters && (
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 block mb-2">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />
-                  Time Period
+                  Time Period (Chart Display & Export Range)
                 </label>
                 <select
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
@@ -299,6 +341,7 @@ export default function Analytics() {
                   <option value="thisWeek">This Week</option>
                   <option value="lastWeek">Last Week</option>
                   <option value="twoWeeks">Last 2 Weeks</option>
+                  <option value="customGrowth">Custom Range (Mock)</option>
                 </select>
               </div>
             )}
@@ -364,17 +407,33 @@ export default function Analytics() {
           {/* SENSOR TRENDS */}
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
 
-            <div className="flex justify-between mb-4">
-              <h3 className="font-bold text-gray-900">24-Hour Sensor Trends</h3>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-gray-900">Sensor Data Export</h3>
 
-              <button
-                onClick={exportSensorDataCSV}
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-medium"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Export Range Selection */}
+                <select
+                  className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  value={sensorExportRange}
+                  onChange={(e) => setSensorExportRange(e.target.value)}
+                >
+                  <option value="24h">Last 24 Hours</option>
+                  <option value="48h">Last 48 Hours</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="custom">Custom Range (Mock)</option>
+                </select>
+
+                <button
+                  onClick={exportSensorDataCSV}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-medium"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </button>
+              </div>
             </div>
+
+            <h4 className="font-semibold text-gray-700 text-sm mb-3">24-Hour Sensor Trends ({activeCount} selected)</h4>
 
             {/* Quick Select Buttons */}
             <div className="flex gap-2 mb-3">
@@ -391,7 +450,7 @@ export default function Analytics() {
                 Clear All
               </button>
               <span className="ml-auto text-xs text-gray-500 self-center">
-                {activeCount} / {sensorConfig.length} selected
+                {activeCount} / {sensorConfig.length} visible
               </span>
             </div>
 
@@ -410,7 +469,7 @@ export default function Analytics() {
                       className="inline-block w-2 h-2 rounded-full mr-1.5"
                       style={{ backgroundColor: sensor.color }}
                     ></span>
-                    {sensor.name}
+                    {sensor.name.split('(')[0].trim()}
                   </button>
                 )
               })}
@@ -453,7 +512,7 @@ export default function Analytics() {
                         stroke={sensor.color}
                         strokeWidth={2.5}
                         dot={false}
-                        name={sensor.name}
+                        name={sensor.name.split('(')[0].trim()}
                         activeDot={{ r: 5 }}
                       />
                     )
