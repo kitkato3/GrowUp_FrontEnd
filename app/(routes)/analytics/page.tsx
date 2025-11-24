@@ -257,11 +257,6 @@ export default function Analytics() {
       currentWarning = "Start date cannot be after the end date.";
     }
 
-    const daysDiff = getDaysDifference(start, end);
-    if (daysDiff > 7 && currentWarning === "") {
-      currentWarning = `Maximum range is 7 days. You selected ${daysDiff} days.`;
-    }
-
     setDateWarning(currentWarning);
   };
 
