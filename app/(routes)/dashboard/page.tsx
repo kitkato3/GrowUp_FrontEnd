@@ -26,8 +26,7 @@ interface SensorDataState {
 interface AlertData { id: number; type: "warning" | "info" | "error"; severity: "low" | "medium" | "high" | "critical"; title: string; message: string; time: string; }
 interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
 
-interface MinimalSensorData { waterTemp: number; ph: number; dissolvedO2: number; ammonia: number; airTemp: number; waterFlow: number; humidity: number; lightIntensity: number; }
-interface FullThresholdState {
+interface MinimalSensorData { waterTemp: number; ph: number; dissolvedO2: number; ammonia: number; airTemp: number; waterFlow: number; humidity: number; lightIntensity: number; waterLevel: number; airPressure: number; }interface FullThresholdState {
   waterTemp: { min: number; max: number }; ph: { min: number; max: number }; dissolvedO2: { min: number; max: number }; ammonia: { min: number; max: number };
   airTemp: { min: number; max: number }; waterFlow: { min: number; max: number }; airHumidity: { min: number; max: number }; lightIntensity: { min: number; max: number };
 }
@@ -50,6 +49,18 @@ const INITIAL_SENSOR_DATA: SensorDataState = {
   airTemp: 25.5,
   airPressure: 1012.0
 }
+
+// ADDED: Fixed Mock Data (Copied from Settings page)
+const SETTINGS_MOCK_SENSOR_DATA: SensorDataState = {
+  waterTemp: 24.0,
+  ph: 7.0,
+  dissolvedO2: 6.5,
+  ammonia: 0.1,
+  airTemp: 25.0,
+  waterFlow: 10.0,
+  humidity: 60.0,
+  lightIntensity: 1000.0,
+};
 
 // --- INITIAL STATE & HOOKS ---
 const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
@@ -229,17 +240,20 @@ export default function Dashboard() {
   const [localControls, setLocalControls] = useState<ControlState>({ ...controls })
   const [sensorData, setSensorData] = useState<SensorDataState>(INITIAL_SENSOR_DATA)
 
+  // ... (sa loob ng Dashboard component)
+
   // ADDED: Calculate System Status
-  // Mocked chemLevel and lightIntensity for Alert Generation on Home Screen
   const minimalSensorData: MinimalSensorData = {
-    waterTemp: sensorData.waterTemp,
-    ph: sensorData.ph,
-    dissolvedO2: sensorData.dissolvedO2,
-    ammonia: sensorData.ammonia,
-    airTemp: sensorData.airTemp,
-    waterFlow: sensorData.waterFlow,
-    humidity: sensorData.humidity,
-    lightIntensity: 1000.0, // Mocked value
+    waterTemp: SETTINGS_MOCK_SENSOR_DATA.waterTemp,
+    ph: SETTINGS_MOCK_SENSOR_DATA.ph,
+    dissolvedO2: SETTINGS_MOCK_SENSOR_DATA.dissolvedO2,
+    ammonia: SETTINGS_MOCK_SENSOR_DATA.ammonia,
+    airTemp: SETTINGS_MOCK_SENSOR_DATA.airTemp,
+    waterFlow: SETTINGS_MOCK_SENSOR_DATA.waterFlow,
+    humidity: SETTINGS_MOCK_SENSOR_DATA.humidity,
+    lightIntensity: SETTINGS_MOCK_SENSOR_DATA.lightIntensity,
+    waterLevel: INITIAL_SENSOR_DATA.waterLevel,
+    airPressure: INITIAL_SENSOR_DATA.airPressure,
   }
 
   const dynamicAlerts = generateAlerts(minimalSensorData, thresholds as FullThresholdState); // Alerts based on live data
