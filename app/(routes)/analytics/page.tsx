@@ -270,13 +270,24 @@ export default function Analytics() {
           ? WEEKLY_GROWTH_DATA.slice(0, 5) // Mocking 'twoWeeks' to contain some data
           : WEEKLY_GROWTH_DATA // Fallback for custom ranges which use mock data anyway
 
+  const filteredSensorData = (() => {
+    switch (sensorExportRange) {
+      case '48h':
+        return [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
+      case '7d':
+        return SENSOR_TREND_DATA.filter((_, index) => index % 4 === 0).slice(0, 7);
+      case 'custom':
+        return SENSOR_TREND_DATA;
+      case '24h':
+      default:
+        return SENSOR_TREND_DATA
+    }
+  })();
   const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
 
   const activeCount = Object.values(selectedSensors).filter(Boolean).length
 
-  /* ------------------------------------------------------
-      EXPORT: Plant Growth CSV
-  ------------------------------------------------------ */
+  /* EXPORT: Plant Growth CSV */
   const exportGrowthDataCSV = () => {
     const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
     const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"]
@@ -291,9 +302,7 @@ export default function Analytics() {
     downloadCSV(filename, headers, rows)
   }
 
-  /* ------------------------------------------------------
-      EXPORT: Sensor CSV (Only Selected)
-  ------------------------------------------------------ */
+  /* EXPORT: Sensor CSV (Only Selected) */
   const exportSensorDataCSV = () => {
     const activeKeys = Object.entries(selectedSensors)
       .filter(([_, isActive]) => isActive)
@@ -394,9 +403,7 @@ export default function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
-  /* ------------------------------------------------------
-      RENDER
-  ------------------------------------------------------ */
+  /* RENDER */
   return (
     <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
       <Navbar time={currentTime.toLocaleTimeString()} />
@@ -579,7 +586,7 @@ export default function Analytics() {
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 block mb-2">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />
-                  Time Period (Chart Display & Export Range)
+                  Time Period
                 </label>
 
                 <select
@@ -595,7 +602,7 @@ export default function Analytics() {
                   <option value="24h">Last 24 Hours</option>
                   <option value="48h">Last 48 Hours</option>
                   <option value="7d">Last 7 Days</option>
-                  <option value="custom">Custom Range (Mock)</option>
+                  <option value="custom">Custom Range</option>
                 </select>
 
                 {sensorExportRange === "custom" && (
@@ -663,7 +670,7 @@ export default function Analytics() {
 
             <div className="h-72">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={SENSOR_TREND_DATA} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                <LineChart data={filteredSensorData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
 
                   <XAxis
