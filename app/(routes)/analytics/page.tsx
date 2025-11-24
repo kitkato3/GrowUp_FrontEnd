@@ -258,14 +258,15 @@ export default function Analytics() {
     }
 
     setDateWarning(currentWarning);
-
-    if (currentWarning === "") {
-      if (type === 'growth') {
-        setSelectedRange('customGrowth');
-      } else {
-        setSensorExportRange('custom');
-      }
-    }
+    /*
+        if (currentWarning === "") {
+          if (type === 'growth') {
+            setSelectedRange('customGrowth');
+          } else {
+            setSensorExportRange('custom');
+          }
+        }
+    */
   };
 
   // Define data variables here so they are in scope
@@ -303,6 +304,16 @@ export default function Analytics() {
 
   const activeCount = Object.values(selectedSensors).filter(Boolean).length
 
+  const applyCustomDateFilter = (type: 'growth' | 'sensor') => {
+    if (dateWarning) {
+      return;
+    }
+    if (type === 'growth') {
+      setSelectedRange('customGrowth');
+    } else {
+      setSensorExportRange('custom');
+    }
+  }
   /* EXPORT: Plant Growth CSV */
   const exportGrowthDataCSV = () => {
     const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
@@ -499,6 +510,7 @@ export default function Analytics() {
                 {selectedRange === "customGrowth" && (
                   <div className="mt-3 space-y-2">
                     <p className="text-xs font-semibold text-gray-700">Select Date Range</p>
+
                     <input
                       type="date"
                       value={customGrowthStartDate}
@@ -512,6 +524,13 @@ export default function Analytics() {
                       className="w-full p-2 border border-gray-300 rounded-md text-sm"
                     />
                     {dateWarning && <p className="text-xs text-red-600 font-medium">{dateWarning}</p>}
+                    <button
+                      onClick={() => applyCustomDateFilter('growth')}
+                      className={`w-full py-1.5 mt-2 text-sm font-semibold rounded-md transition-colors ${dateWarning ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
+                      disabled={!!dateWarning}
+                    >
+                      Apply Filter
+                    </button>
                   </div>
                 )}
               </div>
@@ -639,6 +658,13 @@ export default function Analytics() {
                       />
                     </div>
                     {dateWarning && <p className="text-xs text-red-600 font-medium mt-2">{dateWarning}</p>}
+                    <button
+                      onClick={() => applyCustomDateFilter('sensor')}
+                      className={`w-full py-1.5 mt-2 text-sm font-semibold rounded-md transition-colors ${dateWarning ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 text-white'}`}
+                      disabled={!!dateWarning}
+                    >
+                      Apply Filter
+                    </button>
                   </div>
                 )}
               </div>
