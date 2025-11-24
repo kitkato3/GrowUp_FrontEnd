@@ -25,12 +25,19 @@ interface SensorDataState {
 }
 interface AlertData { id: number; type: "warning" | "info"; severity: "low" | "medium" | "high"; title: string; message: string; time: string; }
 interface ControlToggleProps { label: string; icon: React.ElementType; active: boolean; onChange: (val: boolean) => void; }
-
+/*
 const ALERTS_DATA: AlertData[] = [
   { id: 1, type: "warning", severity: "medium", title: "pH Level Slightly Low", message: "Current pH is 6.2. Consider adjusting pH levels to maintain optimal plant growth.", time: "5 minutes ago" },
   { id: 2, type: "info", severity: "low", title: "System Running Optimally", message: "All parameters are within ideal ranges.", time: "15 minutes ago" },
   { id: 3, type: "warning", severity: "medium", title: "Maintenance Due Soon", message: "Filter cleaning scheduled in 3 days.", time: "2 hours ago" },
 ]
+*/
+
+// --- INITIAL STATE & HOOKS ---
+const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
+const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 } }
+const localStorageKey = 'aquaponics_settings_state';
+const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
 
 const INITIAL_SENSOR_DATA: SensorDataState = {
   waterTemp: 23.2,
@@ -44,12 +51,6 @@ const INITIAL_SENSOR_DATA: SensorDataState = {
   airTemp: 25.5,
   airPressure: 1012.0
 }
-
-// --- INITIAL STATE & HOOKS ---
-const INITIAL_CONTROLS_FULL: SystemControls = { pump: true, fan: false, phAdjustment: true, aerator: true, growLight: true }
-const INITIAL_THRESHOLDS: ThresholdState = { waterTemp: { min: 20, max: 26 }, ph: { min: 6.5, max: 7.5 }, dissolvedO2: { min: 5, max: 8 }, ammonia: { min: 0, max: 0.5 } }
-const localStorageKey = 'aquaponics_settings_state';
-const loadState = (): { controls: SystemControls, activePreset: string, thresholds: ThresholdState } => { try { const savedState = localStorage.getItem(localStorageKey); if (savedState) return JSON.parse(savedState); } catch (error) { console.error('Error loading state:', error); } return { controls: INITIAL_CONTROLS_FULL, activePreset: "balanced", thresholds: INITIAL_THRESHOLDS, }; };
 
 const useAquaponicsSettings = () => {
   const [state, setState] = useState(loadState);
@@ -92,6 +93,64 @@ const getStatusColor = (status: ThresholdStatus): string => {
 }
 const calculatePercentage = (value: number, min: number, max: number) => ((value - min) / (max - min)) * 100
 
+const generateAlerts = (data: SensorDataState, thresholds: ThresholdState): AlertData[] => {
+  const newAlerts: AlertData[] = []
+  let alertIdCounter = 1
+
+  const checkParam = (title: string, value: number, min: number, max: number, unit: string) => {
+    // Critical (outside range)
+    if (value < min || value > max) {
+      newAlerts.push({
+        id: alertIdCounter++,
+        type: "warning",
+        severity: "high",
+        title: `${title} Critical!`,
+        message: `${title} (${value.toFixed(1)}${unit}) is outside critical range [${min}-${max}${unit}]. Current value: ${value.toFixed(1)}${unit}.`,
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      })
+    } else if (value < min + (max - min) * 0.1 || value > max - (max - min) * 0.1) {
+      newAlerts.push({
+        id: alertIdCounter++,
+        type: "warning",
+        severity: "medium",
+        title: `${title} Warning`,
+        message: `${title} (${value.toFixed(1)}${unit}) is approaching boundary range [${min}-${max}${unit}]. Current value: ${value.toFixed(1)}${unit}.`,
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+      })
+    }
+  }
+
+  checkParam("Water Temp", data.waterTemp, thresholds.waterTemp.min, thresholds.waterTemp.max, "°C")
+  checkParam("pH Level", data.ph, thresholds.ph.min, thresholds.ph.max, "")
+  checkParam("Dissolved O₂", data.dissolvedO2, thresholds.dissolvedO2.min, thresholds.dissolvedO2.max, "mg/L")
+  checkParam("Ammonia", data.ammonia, thresholds.ammonia.min, thresholds.ammonia.max, "ppm")
+
+  // Water Level check (specific)
+  if (data.waterLevel < 75) {
+    newAlerts.push({
+      id: alertIdCounter++,
+      type: "warning",
+      severity: "medium",
+      title: "Water Level Low",
+      message: `Water reservoir is at ${data.waterLevel.toFixed(0)}%. Consider checking auto-fill or adding water.`,
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    })
+  }
+
+  // Optimal system info alert (if no warnings)
+  if (newAlerts.length === 0) {
+    newAlerts.push({
+      id: alertIdCounter++,
+      type: "info",
+      severity: "low",
+      title: "System Running Optimally",
+      message: "All monitored parameters are within ideal ranges.",
+      time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+    })
+  }
+
+  return newAlerts.reverse()
+}
 // --- COMPONENTS (Navbar, BottomNavigation, SensorCard, ControlToggle) ---
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
@@ -170,14 +229,14 @@ const ControlToggle: React.FC<ControlToggleProps> = ({ label, icon: Icon, active
 
 // --- DASHBOARD COMPONENT ---
 export default function Dashboard() {
-  const { controls, quickSaveControls } = useAquaponicsSettings()
+  const { controls, quickSaveControls, thresholds } = useAquaponicsSettings()
   const [currentTime, setCurrentTime] = useState<Date>(new Date())
   const [expandedAlert, setExpandedAlert] = useState<number | null>(null)
   const [showControlsModal, setShowControlsModal] = useState<boolean>(false)
   const [showCameraModal, setShowCameraModal] = useState<boolean>(false)
   const [localControls, setLocalControls] = useState<ControlState>({ ...controls })
   const [sensorData, setSensorData] = useState<SensorDataState>(INITIAL_SENSOR_DATA)
-  const alerts = ALERTS_DATA
+  const [alerts, setAlerts] = useState<AlertData[]>([])
 
   useEffect(() => {
     if (showControlsModal) setLocalControls({ ...controls })
@@ -186,19 +245,35 @@ export default function Dashboard() {
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentTime(new Date())
-      setSensorData(prev => ({
-        ...prev,
-        waterTemp: Number.parseFloat((22 + Math.random() * 2).toFixed(1)),
-        ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
-        dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
-        waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
-        airTemp: Number.parseFloat((24 + Math.random() * 3).toFixed(1)),
-        airPressure: Number.parseFloat((1000 + Math.random() * 25).toFixed(1)),
-        humidity: Number.parseFloat((60 + Math.random() * 10).toFixed(1)),
-      }))
+
+      // 1. Gamitin ang setSensorData na may functional update (prev =>)
+      setSensorData(prev => {
+
+        // 2. Tiyakin na kumpleto ang lahat ng 10 properties para mag-match sa SensorDataState
+        const newSensorData: SensorDataState = {
+          waterTemp: Number.parseFloat((22 + Math.random() * 2).toFixed(1)),
+          ph: Number.parseFloat((6.5 + Math.random() * 0.6).toFixed(1)),
+          dissolvedO2: Number.parseFloat((6.8 + Math.random() * 0.6).toFixed(1)),
+          // Gumamit ng 'prev' para sa continuity
+          waterLevel: Math.min(100, Math.max(70, prev.waterLevel + (Math.random() - 0.5) * 2)),
+          waterFlow: Number.parseFloat((4.5 + (Math.random() - 0.5) * 0.5).toFixed(1)), // 🌟 IDINAGDAG!
+          humidity: Number.parseFloat((60 + Math.random() * 10).toFixed(1)),
+          ammonia: Number.parseFloat((0.1 + Math.random() * 0.5).toFixed(1)),
+          lightIntensity: Number.parseFloat((14000 + Math.random() * 3000).toFixed(0)),
+          airTemp: Number.parseFloat((24 + Math.random() * 3).toFixed(1)),
+          airPressure: Number.parseFloat((1000 + Math.random() * 25).toFixed(1)),
+        }
+
+        // 3. I-generate ang Alerts
+        setAlerts(generateAlerts(newSensorData, thresholds))
+
+        return newSensorData
+      })
     }, 3000)
+
     return () => clearInterval(interval)
-  }, [])
+    // Dependency sa thresholds para mag-update ang alerts logic kung magbago ang settings
+  }, [thresholds])
 
   const handleQuickControlsSave = () => {
     quickSaveControls({ ...localControls })
