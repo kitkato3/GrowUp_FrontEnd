@@ -6,6 +6,9 @@ import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, Bar
 // Removed: import Link from "next/link"
 // Removed: import { usePathname } from "next/navigation"
 
+// Added CurrentView type for state-based navigation
+type CurrentView = 'home' | 'analytics' | 'camera' | 'settings';
+
 // UPDATED: Removed "nitrates" from SensorKey
 type SensorKey = "waterTemp" | "ph" | "dissolvedO2" | "airTemp" | "lightIntensity" | "waterLevel" | "waterFlow" | "humidity" | "ammonia" | "airPressure"
 type SensorState = Record<SensorKey, boolean>
@@ -63,7 +66,7 @@ const downloadCSV = (filename: string, headers: string[], rows: any[][]) => {
   window.URL.revokeObjectURL(url)
 }
 
-/* NAVIGATION COMPONENTS (Fixed for standalone use) */
+/* NAVIGATION COMPONENTS (Fixed for functional navigation) */
 
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
   <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
@@ -75,10 +78,10 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
   </div>
 );
 
-const BottomNavigation = () => {
-  // Mock tabs and highlight 'Analytics' since this is the component displayed
+// UPDATED: Now accepts currentView and setView props
+const BottomNavigation: React.FC<{ currentView: CurrentView, setView: (view: CurrentView) => void }> = ({ currentView, setView }) => {
   const tabs = [
-    { id: "dashboard", label: "Home", icon: Home },
+    { id: "home", label: "Home", icon: Home },
     { id: "analytics", label: "Analytics", icon: BarChart3 },
     { id: "camera", label: "Camera", icon: Camera },
     { id: "settings", label: "Settings", icon: Settings },
@@ -88,18 +91,18 @@ const BottomNavigation = () => {
     <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
       <div className="flex items-center justify-around py-3">
         {tabs.map((tab) => {
-          // Hardcode 'analytics' as active view
-          const isActive = tab.id === "analytics";
+          const isActive = tab.id === currentView;
           const Icon = tab.icon;
           return (
-            <div
+            // UPDATED: Using button with onClick for state change
+            <button
               key={tab.id}
-              // Using div/button as placeholder since routing logic is missing/unnecessary here
+              onClick={() => setView(tab.id as CurrentView)}
               className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all cursor-pointer ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
             >
               <Icon className="w-5 h-5 mb-1" />
               <span className="text-xs font-semibold">{tab.label}</span>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -107,9 +110,8 @@ const BottomNavigation = () => {
   );
 };
 
-/* NEW FEATURE: Sensor Readings Table Component (Now displays ALL sensors) */
+/* SENSOR READINGS TABLE */
 const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestData }) => {
-  // Removed slicing to include all sensors as requested by the user
   const displayConfig = sensorConfig;
 
   return (
@@ -125,7 +127,6 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
             key={sensor.key}
             className="p-3 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-between"
           >
-            {/* Removing sensor module name from display for cleaner UI */}
             <span className="text-xs font-medium text-gray-700">{sensor.name.split('(')[0].trim()}</span>
             <span className="text-sm font-bold" style={{ color: sensor.color }}>
               {sensor.format(latestData[sensor.key])} {sensor.unit}
@@ -139,9 +140,385 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
 };
 
 
+/* ANALYTICS CONTENT (Extracted for conditional rendering) */
+const AnalyticsContent: React.FC<{
+  selectedSensors: SensorState;
+  setSelectedSensors: React.Dispatch<React.SetStateAction<SensorState>>;
+  selectedRange: string;
+  setSelectedRange: React.Dispatch<React.SetStateAction<string>>;
+  showFilters: boolean;
+  setShowFilters: React.Dispatch<React.SetStateAction<boolean>>;
+  sensorExportRange: string;
+  setSensorExportRange: React.Dispatch<React.SetStateAction<string>>;
+  customGrowthStartDate: string;
+  customGrowthEndDate: string;
+  customSensorStartDate: string;
+  customSensorEndDate: string;
+  dateWarning: string;
+  handleDateChange: (type: 'growth' | 'sensor', key: 'start' | 'end', value: string) => void;
+  exportGrowthDataCSV: () => void;
+  exportSensorDataCSV: () => void;
+  exportAllData: () => void;
+  toggleSensor: (key: SensorKey) => void;
+  selectAllSensors: () => void;
+  deselectAllSensors: () => void;
+  latestSensorReading: SensorTrendRow;
+}> = (props) => {
+  const {
+    selectedSensors, selectedRange, setSelectedRange, showFilters, setShowFilters,
+    sensorExportRange, setSensorExportRange, customGrowthStartDate, customGrowthEndDate,
+    customSensorStartDate, customSensorEndDate, dateWarning, handleDateChange,
+    exportGrowthDataCSV, exportSensorDataCSV, exportAllData, toggleSensor,
+    selectAllSensors, deselectAllSensors, latestSensorReading
+  } = props;
+
+  const filteredGrowthData =
+    selectedRange === "thisWeek" || selectedRange === "customGrowth"
+      ? WEEKLY_GROWTH_DATA
+      : selectedRange === "lastWeek"
+        ? WEEKLY_GROWTH_DATA.slice(1)
+        : WEEKLY_GROWTH_DATA.slice(2)
+
+  const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
+  const activeCount = Object.values(selectedSensors).filter(Boolean).length
+
+  return (
+    <div className="space-y-5">
+
+      {/* 1. Live Sensor Readings Table */}
+      <SensorReadingsTable latestData={latestSensorReading} />
+
+      {/* EXPORT ALL BUTTON */}
+      <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-2xl p-4 border border-emerald-200">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-bold text-gray-900">Export Complete Analytics</h3>
+            <p className="text-xs text-gray-600 mt-1">
+              Download all growth and sensor data in one file
+            </p>
+          </div>
+          <button
+            onClick={exportAllData}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Export All
+          </button>
+        </div>
+      </div>
+
+      {/* GROWTH CHART */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-bold text-gray-900">Weekly Plant Growth</h3>
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium"
+            >
+              <Filter className="w-3.5 h-3.5" />
+              {showFilters ? "Hide" : "Filters"}
+            </button>
+
+            <button
+              onClick={exportGrowthDataCSV}
+              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md text-xs font-medium"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export
+            </button>
+          </div>
+        </div>
+
+        {/* Filter Dropdown (Updated with Custom Range Date Pickers) */}
+        {showFilters && (
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <label className="text-xs font-semibold text-gray-700 block mb-2">
+              <Calendar className="w-3.5 h-3.5 inline mr-1" />
+              Time Period (Chart Display & Export Range)
+            </label>
+            <select
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              value={selectedRange}
+              onChange={(e) => {
+                setSelectedRange(e.target.value);
+                // Clear warning when switching out of custom mode
+                if (e.target.value !== "customGrowth") {
+                  // Clear warning logic is moved to the main component's handleDateChange if needed across tabs
+                }
+              }}
+            >
+              <option value="thisWeek">This Week</option>
+              <option value="lastWeek">Last Week</option>
+              <option value="twoWeeks">Last 2 Weeks</option>
+              {/* NEW OPTION */}
+              <option value="customGrowth">Custom Range (Mock)</option>
+            </select>
+
+            {selectedRange === "customGrowth" && (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs font-semibold text-gray-700">Select Date Range (Max 7 Days)</p>
+                <input
+                  type="date"
+                  value={customGrowthStartDate}
+                  onChange={(e) => handleDateChange('growth', 'start', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                />
+                <input
+                  type="date"
+                  value={customGrowthEndDate}
+                  onChange={(e) => handleDateChange('growth', 'end', e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                />
+                {selectedRange === "customGrowth" && dateWarning && <p className="text-xs text-red-600 font-medium">{dateWarning}</p>}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="h-56">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={filteredGrowthData}>
+              <defs>
+                <linearGradient id="colorHeight" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="day" stroke="#9ca3af" />
+              <YAxis stroke="#9ca3af" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1f2937",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontSize: "12px",
+                  padding: "8px 12px",
+                }}
+              />
+
+              <Area
+                type="monotone"
+                dataKey="height"
+                stroke="#10b981"
+                fillOpacity={1}
+                fill="url(#colorHeight)"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Growth Stats */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <div className="bg-emerald-50 rounded-lg p-3 text-center">
+            <div className="text-xs text-gray-600">Current Height</div>
+            <div className="text-2xl font-bold text-emerald-600">
+              {lastGrowth?.height ?? "—"}cm
+            </div>
+          </div>
+
+          <div className="bg-blue-50 rounded-lg p-3 text-center">
+            <div className="text-xs text-gray-600">Weekly Growth</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {filteredGrowthData.length > 1
+                ? `+${(
+                  lastGrowth.height -
+                  filteredGrowthData[0].height
+                ).toFixed(1)}cm`
+                : "—"}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SENSOR TRENDS */}
+      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="font-bold text-gray-900">Sensor Data Export</h3>
+
+          <div className="flex items-center gap-2">
+            {/* Export Range Selection */}
+            <select
+              className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              value={sensorExportRange}
+              onChange={(e) => {
+                setSensorExportRange(e.target.value);
+                // Clear warning when switching out of custom mode
+                if (e.target.value !== "custom") {
+                  // Clear warning logic is moved to the main component's handleDateChange if needed across tabs
+                }
+              }}
+            >
+              <option value="24h">Last 24 Hours</option>
+              <option value="48h">Last 48 Hours</option>
+              <option value="7d">Last 7 Days</option>
+              <option value="custom">Custom Range (Mock)</option>
+            </select>
+
+            <button
+              onClick={exportSensorDataCSV}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-medium"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        {/* Custom Range Date Pickers for Sensor Data */}
+        {sensorExportRange === "custom" && (
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-xs font-semibold text-gray-700 mb-2">Select Date Range (Max 7 Days)</p>
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={customSensorStartDate}
+                onChange={(e) => handleDateChange('sensor', 'start', e.target.value)}
+                className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
+              />
+              <input
+                type="date"
+                value={customSensorEndDate}
+                onChange={(e) => handleDateChange('sensor', 'end', e.target.value)}
+                className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
+              />
+            </div>
+            {sensorExportRange === "custom" && dateWarning && <p className="text-xs text-red-600 font-medium mt-2">{dateWarning}</p>}
+          </div>
+        )}
+
+        <h4 className="font-semibold text-gray-700 text-sm mb-3">24-Hour Sensor Trends ({activeCount} selected)</h4>
+
+        {/* Quick Select Buttons */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={selectAllSensors}
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
+          >
+            Select All
+          </button>
+          <button
+            onClick={deselectAllSensors}
+            className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
+          >
+            Clear All
+          </button>
+          <span className="ml-auto text-xs text-gray-500 self-center">
+            {activeCount} / {sensorConfig.length} visible
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-4">
+          {sensorConfig.map((sensor) => {
+            const active = selectedSensors[sensor.key]
+            return (
+              <button
+                key={sensor.key}
+                onClick={() => toggleSensor(sensor.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${active ? "bg-white text-gray-900 border-2 shadow-sm" : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
+                  }`}
+                style={{ borderColor: active ? sensor.color : undefined }}
+              >
+                <span
+                  className="inline-block w-2 h-2 rounded-full mr-1.5"
+                  style={{ backgroundColor: sensor.color }}
+                ></span>
+                {sensor.name.split('(')[0].trim()}
+              </button>
+            )
+          })}
+        </div>
+
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={SENSOR_TREND_DATA} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+
+              <XAxis
+                dataKey="time"
+                stroke="#9ca3af"
+                tick={{ fill: "#6b7280", fontSize: 11 }}
+              />
+              <YAxis
+                stroke="#9ca3af"
+                tick={{ fill: "#6b7280", fontSize: 11 }}
+              />
+
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "#1f2937",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontSize: "12px",
+                  padding: "8px 12px",
+                }}
+              />
+
+              <Legend wrapperStyle={{ fontSize: "10px", paddingTop: 10 }} />
+
+              {sensorConfig.map(sensor =>
+                selectedSensors[sensor.key] && (
+                  <Line
+                    key={sensor.key}
+                    type="monotone"
+                    dataKey={sensor.key}
+                    stroke={sensor.color}
+                    strokeWidth={2.5}
+                    dot={false}
+                    name={sensor.name.split('(')[0].trim()} // Clean name for legend
+                    activeDot={{ r: 5 }}
+                  />
+                )
+              )}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* HEALTH METRICS */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Fish className="w-5 h-5 text-blue-500" />
+            <span className="font-semibold text-gray-900">Fish Health</span>
+          </div>
+          <div className="text-2xl font-bold text-emerald-600">Excellent</div>
+          <div className="text-xs text-gray-500 mt-2">Ammonia: {SENSOR_TREND_DATA[SENSOR_TREND_DATA.length - 1].ammonia} ppm</div>
+          <div className="w-full h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
+            <div className="h-full w-4/5 bg-emerald-500"></div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Droplets className="w-5 h-5 text-blue-500" />
+            <span className="font-semibold text-gray-900">Water Quality</span>
+          </div>
+          <div className="text-2xl font-bold text-emerald-600">95%</div>
+          <div className="text-xs text-gray-500 mt-2">Optimal range</div>
+          <div className="w-full h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
+            <div className="h-full w-11/12 bg-emerald-500"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 /* MAIN COMPONENT */
 
 export default function Analytics() {
+  // NEW STATE: View control
+  const [view, setView] = useState<CurrentView>('analytics');
+
   const [selectedSensors, setSelectedSensors] = useState<SensorState>({
     waterTemp: true,
     ph: true,
@@ -150,20 +527,18 @@ export default function Analytics() {
     lightIntensity: false,
     waterLevel: false,
     waterFlow: false,
-    // UPDATED: Removed nitrates: false,
     humidity: false,
     ammonia: false,
     airPressure: false,
-  } as SensorState) // Casting to SensorState now that 'nitrates' is removed
+  } as SensorState)
 
-  // selectedRange now controls both chart display and export range for growth
+  // selectedRange controls both chart display and export range for growth
   const [selectedRange, setSelectedRange] = useState("thisWeek")
   const [showFilters, setShowFilters] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
-  // NEW STATE for Custom Export Range
   const [sensorExportRange, setSensorExportRange] = useState("24h")
 
-  // NEW STATES for Custom Range Dates
+  // States for Custom Range Dates
   const [customGrowthStartDate, setCustomGrowthStartDate] = useState(formatDate());
   const [customGrowthEndDate, setCustomGrowthEndDate] = useState(formatDate());
   const [customSensorStartDate, setCustomSensorStartDate] = useState(formatDate());
@@ -178,9 +553,11 @@ export default function Analytics() {
     return Math.abs(Math.round((firstDate.getTime() - secondDate.getTime()) / oneDay));
   };
 
+  // Consolidated handler for all date changes
   const handleDateChange = (type: 'growth' | 'sensor', key: 'start' | 'end', value: string) => {
     let start, end;
 
+    // 1. Update state
     if (type === 'growth') {
       if (key === 'start') {
         start = value;
@@ -203,14 +580,13 @@ export default function Analytics() {
       }
     }
 
+    // 2. Validate
     let currentWarning = "";
 
-    // Check if start is before end
     if (new Date(start) > new Date(end)) {
       currentWarning = "Start date cannot be after the end date.";
     }
 
-    // Check 7-day limit
     const daysDiff = getDaysDifference(start, end);
     if (daysDiff > 7 && currentWarning === "") {
       currentWarning = `Maximum range is 7 days. You selected ${daysDiff} days.`;
@@ -219,8 +595,9 @@ export default function Analytics() {
     setDateWarning(currentWarning);
   };
 
+  /* EXPORT LOGIC */
 
-  /* Filter Growth Data (Updated to treat 'customGrowth' as default mock data) */
+  // Reusing mock filtering logic from before
   const filteredGrowthData =
     selectedRange === "thisWeek" || selectedRange === "customGrowth"
       ? WEEKLY_GROWTH_DATA
@@ -228,7 +605,6 @@ export default function Analytics() {
         ? WEEKLY_GROWTH_DATA.slice(1)
         : WEEKLY_GROWTH_DATA.slice(2)
 
-  /* EXPORT: Plant Growth CSV (Updated to use selectedRange for filename) */
   const exportGrowthDataCSV = () => {
     let filename = `plant_growth_${selectedRange}_${formatDate()}.csv`;
 
@@ -242,112 +618,63 @@ export default function Analytics() {
     }
 
     const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"]
-    const rows = filteredGrowthData.map((d) => [
-      d.day,
-      d.height,
-      d.leaves,
-      d.health
-    ])
-
+    const rows = filteredGrowthData.map((d) => [d.day, d.height, d.leaves, d.health])
     downloadCSV(filename, headers, rows)
   }
 
-  /* UPDATED: EXPORT Sensor CSV (Handles Export Range and Custom Dates) */
   const exportSensorDataCSV = () => {
     if (sensorExportRange === "custom" && dateWarning) {
       alert(`Cannot export: Please fix the date range issue first. Error: ${dateWarning}`);
       return;
     }
 
-    const activeKeys = Object.entries(selectedSensors)
-      .filter(([_, isActive]) => isActive)
-      .map(([key]) => key as SensorKey)
-
+    const activeKeys = Object.entries(selectedSensors).filter(([_, isActive]) => isActive).map(([key]) => key as SensorKey)
     let filename = `sensor_data_${sensorExportRange}_${formatDate()}.csv`;
 
     if (sensorExportRange === "custom") {
       filename = `sensor_data_${customSensorStartDate}_to_${customSensorEndDate}.csv`;
     }
 
-    const headers = ["Time", ...activeKeys.map(k =>
-      sensorConfig.find(s => s.key === k)?.name || k
-    )]
+    const headers = ["Time", ...activeKeys.map(k => sensorConfig.find(s => s.key === k)?.name || k)]
 
-    // Mock data filtering based on sensorExportRange (still using the same mock logic)
     let exportedData = SENSOR_TREND_DATA;
     if (sensorExportRange === "48h") {
-      // Mocking double the data for 48h export
       exportedData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA.map(d => ({ ...d, time: `Day2 ${d.time}` }))];
     } else if (sensorExportRange === "7d" || sensorExportRange === "custom") {
-      // Mocking a long list of data for 7 days
       exportedData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
     }
 
-    const rows = exportedData.map((entry) => [
-      entry.time,
-      ...activeKeys.map((key) => entry[key])
-    ])
-
+    const rows = exportedData.map((entry) => [entry.time, ...activeKeys.map((key) => entry[key])])
     downloadCSV(filename, headers, rows)
   }
 
-  /* EXPORT: All Data Combined */
   const exportAllData = () => {
     const filename = `complete_analytics_${formatDate()}.csv`
+    const headers = ["Type", "Day/Time", "Value1", "Value2", "Value3", "Value4"]
 
-    const headers = [
-      "Type",
-      "Day/Time",
-      "Value1",
-      "Value2",
-      "Value3",
-      "Value4"
-    ]
-
-    const growthRows = filteredGrowthData.map(d => [
-      "Growth",
-      d.day,
-      `Height: ${d.height}cm`,
-      `Leaves: ${d.leaves}`,
-      `Health: ${d.health}%`,
-      ""
-    ])
-
-    const sensorRows = SENSOR_TREND_DATA.map(d => [
-      "Sensor",
-      d.time,
-      `Water: ${d.waterTemp}°C`,
-      `pH: ${d.ph}`,
-      `DO2: ${d.dissolvedO2}`,
-      `Light: ${d.lightIntensity}lux`
-    ])
+    const growthRows = filteredGrowthData.map(d => ["Growth", d.day, `Height: ${d.height}cm`, `Leaves: ${d.leaves}`, `Health: ${d.health}%`, ""])
+    const sensorRows = SENSOR_TREND_DATA.map(d => ["Sensor", d.time, `Water: ${d.waterTemp}°C`, `pH: ${d.ph}`, `DO2: ${d.dissolvedO2}`, `Light: ${d.lightIntensity}lux`])
 
     downloadCSV(filename, headers, [...growthRows, [""], ...sensorRows])
   }
 
+  // Sensor toggle and selection logic
   const toggleSensor = (key: SensorKey) => {
     setSelectedSensors(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
   const selectAllSensors = () => {
-    const allTrue = Object.keys(selectedSensors).reduce((acc, key) => ({
-      ...acc,
-      [key]: true
-    }), {} as SensorState)
+    const allTrue = Object.keys(selectedSensors).reduce((acc, key) => ({ ...acc, [key]: true }), {} as SensorState)
     setSelectedSensors(allTrue)
   }
 
   const deselectAllSensors = () => {
-    const allFalse = Object.keys(selectedSensors).reduce((acc, key) => ({
-      ...acc,
-      [key]: false
-    }), {} as SensorState)
+    const allFalse = Object.keys(selectedSensors).reduce((acc, key) => ({ ...acc, [key]: false }), {} as SensorState)
     setSelectedSensors(allFalse)
   }
 
-  const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
   const latestSensorReading = SENSOR_TREND_DATA[SENSOR_TREND_DATA.length - 1]
-  const activeCount = Object.values(selectedSensors).filter(Boolean).length
+
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -356,6 +683,62 @@ export default function Analytics() {
     return () => clearInterval(interval);
   }, []);
 
+  // Placeholder content for non-analytics views
+  const renderOtherContent = (title: string, icon: React.ReactNode) => (
+    <div className="p-8 text-center min-h-[70vh] flex flex-col items-center justify-center">
+      {icon}
+      <h2 className="text-3xl font-bold text-gray-800 mt-4 mb-2">{title}</h2>
+      <p className="text-gray-500">This is a placeholder screen. Switch back to Analytics to view data.</p>
+    </div>
+  );
+
+  const renderContent = () => {
+    switch (view) {
+      case 'home':
+        return renderOtherContent(
+          'Home Dashboard',
+          <Home className="w-16 h-16 text-emerald-500" />
+        );
+      case 'camera':
+        return renderOtherContent(
+          'Camera Feed & Controls',
+          <Camera className="w-16 h-16 text-blue-500" />
+        );
+      case 'settings':
+        return renderOtherContent(
+          'System Settings',
+          <Settings className="w-16 h-16 text-orange-500" />
+        );
+      case 'analytics':
+      default:
+        return (
+          <AnalyticsContent
+            selectedSensors={selectedSensors}
+            setSelectedSensors={setSelectedSensors}
+            selectedRange={selectedRange}
+            setSelectedRange={setSelectedRange}
+            showFilters={showFilters}
+            setShowFilters={setShowFilters}
+            sensorExportRange={sensorExportRange}
+            setSensorExportRange={setSensorExportRange}
+            customGrowthStartDate={customGrowthStartDate}
+            customGrowthEndDate={customGrowthEndDate}
+            customSensorStartDate={customSensorStartDate}
+            customSensorEndDate={customSensorEndDate}
+            dateWarning={dateWarning}
+            handleDateChange={handleDateChange}
+            exportGrowthDataCSV={exportGrowthDataCSV}
+            exportSensorDataCSV={exportSensorDataCSV}
+            exportAllData={exportAllData}
+            toggleSensor={toggleSensor}
+            selectAllSensors={selectAllSensors}
+            deselectAllSensors={deselectAllSensors}
+            latestSensorReading={latestSensorReading}
+          />
+        );
+    }
+  }
+
   /* RENDER */
   return (
     <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
@@ -363,338 +746,17 @@ export default function Analytics() {
 
       <div className="px-4 py-5 pb-24">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Analytics Dashboard</h1>
-          <p className="text-gray-600 mt-1">Monitor your aquaponics system performance</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {view === 'analytics' ? 'Analytics Dashboard' : renderContent().props.title}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {view === 'analytics' ? 'Monitor your aquaponics system performance' : 'Navigation Placeholder'}
+          </p>
         </div>
-
-        <div className="space-y-5">
-
-          {/* 1. Live Sensor Readings Table (Now includes ALL sensors) */}
-          <SensorReadingsTable latestData={latestSensorReading} />
-
-          {/* EXPORT ALL BUTTON */}
-          <div className="bg-gradient-to-r from-emerald-50 to-blue-50 rounded-2xl p-4 border border-emerald-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-gray-900">Export Complete Analytics</h3>
-                <p className="text-xs text-gray-600 mt-1">
-                  Download all growth and sensor data in one file
-                </p>
-              </div>
-              <button
-                onClick={exportAllData}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-semibold transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Export All
-              </button>
-            </div>
-          </div>
-
-          {/* GROWTH CHART */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900">Weekly Plant Growth</h3>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium"
-                >
-                  <Filter className="w-3.5 h-3.5" />
-                  {showFilters ? "Hide" : "Filters"}
-                </button>
-
-                <button
-                  onClick={exportGrowthDataCSV}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-md text-xs font-medium"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </button>
-              </div>
-            </div>
-
-            {/* Filter Dropdown (Updated with Custom Range Date Pickers) */}
-            {showFilters && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <label className="text-xs font-semibold text-gray-700 block mb-2">
-                  <Calendar className="w-3.5 h-3.5 inline mr-1" />
-                  Time Period (Chart Display & Export Range)
-                </label>
-                <select
-                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  value={selectedRange}
-                  onChange={(e) => {
-                    setSelectedRange(e.target.value);
-                    // Clear warning when switching out of custom mode
-                    if (e.target.value !== "customGrowth") {
-                      setDateWarning("");
-                    }
-                  }}
-                >
-                  <option value="thisWeek">This Week</option>
-                  <option value="lastWeek">Last Week</option>
-                  <option value="twoWeeks">Last 2 Weeks</option>
-                  {/* NEW OPTION */}
-                  <option value="customGrowth">Custom Range</option>
-                </select>
-
-                {selectedRange === "customGrowth" && (
-                  <div className="mt-3 space-y-2">
-                    <p className="text-xs font-semibold text-gray-700">Select Date Range (Max 7 Days)</p>
-                    <input
-                      type="date"
-                      value={customGrowthStartDate}
-                      onChange={(e) => handleDateChange('growth', 'start', e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                    />
-                    <input
-                      type="date"
-                      value={customGrowthEndDate}
-                      onChange={(e) => handleDateChange('growth', 'end', e.target.value)}
-                      className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                    />
-                    {selectedRange === "customGrowth" && dateWarning && <p className="text-xs text-red-600 font-medium">{dateWarning}</p>}
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={filteredGrowthData}>
-                  <defs>
-                    <linearGradient id="colorHeight" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" stroke="#9ca3af" />
-                  <YAxis stroke="#9ca3af" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1f2937",
-                      border: "none",
-                      borderRadius: "8px",
-                      color: "#fff",
-                      fontSize: "12px",
-                      padding: "8px 12px",
-                    }}
-                  />
-
-                  <Area
-                    type="monotone"
-                    dataKey="height"
-                    stroke="#10b981"
-                    fillOpacity={1}
-                    fill="url(#colorHeight)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Growth Stats */}
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              <div className="bg-emerald-50 rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-600">Current Height</div>
-                <div className="text-2xl font-bold text-emerald-600">
-                  {lastGrowth?.height ?? "—"}cm
-                </div>
-              </div>
-
-              <div className="bg-blue-50 rounded-lg p-3 text-center">
-                <div className="text-xs text-gray-600">Weekly Growth</div>
-                <div className="text-2xl font-bold text-blue-600">
-                  {filteredGrowthData.length > 1
-                    ? `+${(
-                      lastGrowth.height -
-                      filteredGrowthData[0].height
-                    ).toFixed(1)}cm`
-                    : "—"}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SENSOR TRENDS */}
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-gray-900">Sensor Data Export</h3>
-
-              <div className="flex items-center gap-2">
-                {/* Export Range Selection */}
-                <select
-                  className="px-2 py-1.5 text-xs border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                  value={sensorExportRange}
-                  onChange={(e) => {
-                    setSensorExportRange(e.target.value);
-                    if (e.target.value !== "custom") {
-                      setDateWarning("");
-                    }
-                  }}
-                >
-                  <option value="24h">Last 24 Hours</option>
-                  <option value="48h">Last 48 Hours</option>
-                  <option value="7d">Last 7 Days</option>
-                  <option value="custom">Custom Range</option>
-                </select>
-
-                <button
-                  onClick={exportSensorDataCSV}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-medium"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Export
-                </button>
-              </div>
-            </div>
-
-            {/* Custom Range Date Pickers for Sensor Data */}
-            {sensorExportRange === "custom" && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-xs font-semibold text-gray-700 mb-2">Select Date Range (Max 7 Days)</p>
-                <div className="flex gap-2">
-                  <input
-                    type="date"
-                    value={customSensorStartDate}
-                    onChange={(e) => handleDateChange('sensor', 'start', e.target.value)}
-                    className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
-                  />
-                  <input
-                    type="date"
-                    value={customSensorEndDate}
-                    onChange={(e) => handleDateChange('sensor', 'end', e.target.value)}
-                    className="w-1/2 p-2 border border-gray-300 rounded-md text-sm"
-                  />
-                </div>
-                {sensorExportRange === "custom" && dateWarning && <p className="text-xs text-red-600 font-medium mt-2">{dateWarning}</p>}
-              </div>
-            )}
-
-            <h4 className="font-semibold text-gray-700 text-sm mb-3">24-Hour Sensor Trends ({activeCount} selected)</h4>
-
-            {/* Quick Select Buttons */}
-            <div className="flex gap-2 mb-3">
-              <button
-                onClick={selectAllSensors}
-                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
-              >
-                Select All
-              </button>
-              <button
-                onClick={deselectAllSensors}
-                className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
-              >
-                Clear All
-              </button>
-              <span className="ml-auto text-xs text-gray-500 self-center">
-                {activeCount} / {sensorConfig.length} visible
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-2 mb-4">
-              {sensorConfig.map((sensor) => {
-                const active = selectedSensors[sensor.key]
-                return (
-                  <button
-                    key={sensor.key}
-                    onClick={() => toggleSensor(sensor.key)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${active ? "bg-white text-gray-900 border-2 shadow-sm" : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
-                      }`}
-                    style={{ borderColor: active ? sensor.color : undefined }}
-                  >
-                    <span
-                      className="inline-block w-2 h-2 rounded-full mr-1.5"
-                      style={{ backgroundColor: sensor.color }}
-                    ></span>
-                    {sensor.name.split('(')[0].trim()}
-                  </button>
-                )
-              })}
-            </div>
-
-            <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={SENSOR_TREND_DATA} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-
-                  <XAxis
-                    dataKey="time"
-                    stroke="#9ca3af"
-                    tick={{ fill: "#6b7280", fontSize: 11 }}
-                  />
-                  <YAxis
-                    stroke="#9ca3af"
-                    tick={{ fill: "#6b7280", fontSize: 11 }}
-                  />
-
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1f2937",
-                      border: "none",
-                      borderRadius: "8px",
-                      color: "#fff",
-                      fontSize: "12px",
-                      padding: "8px 12px",
-                    }}
-                  />
-
-                  <Legend wrapperStyle={{ fontSize: "10px", paddingTop: 10 }} />
-
-                  {sensorConfig.map(sensor =>
-                    selectedSensors[sensor.key] && (
-                      <Line
-                        key={sensor.key}
-                        type="monotone"
-                        dataKey={sensor.key}
-                        stroke={sensor.color}
-                        strokeWidth={2.5}
-                        dot={false}
-                        name={sensor.name.split('(')[0].trim()}
-                        activeDot={{ r: 5 }}
-                      />
-                    )
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* HEALTH METRICS */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-3">
-                <Fish className="w-5 h-5 text-blue-500" />
-                <span className="font-semibold text-gray-900">Fish Health</span>
-              </div>
-              <div className="text-2xl font-bold text-emerald-600">Excellent</div>
-              <div className="text-xs text-gray-500 mt-2">Ammonia: {SENSOR_TREND_DATA[SENSOR_TREND_DATA.length - 1].ammonia} ppm</div>
-              <div className="w-full h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
-                <div className="h-full w-4/5 bg-emerald-500"></div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-              <div className="flex items-center gap-2 mb-3">
-                <Droplets className="w-5 h-5 text-blue-500" />
-                <span className="font-semibold text-gray-900">Water Quality</span>
-              </div>
-              <div className="text-2xl font-bold text-emerald-600">95%</div>
-              <div className="text-xs text-gray-500 mt-2">Optimal range</div>
-              <div className="w-full h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
-                <div className="h-full w-11/12 bg-emerald-500"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {renderContent()}
       </div>
 
-      <BottomNavigation />
+      <BottomNavigation currentView={view} setView={setView} />
     </div>
   )
 }
