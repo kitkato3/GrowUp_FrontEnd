@@ -1,4 +1,3 @@
-
 "use client"
 
 import { Camera, X, Download, Trash2, Maximize2, Home, BarChart3, Settings } from "lucide-react"
@@ -6,13 +5,26 @@ import React, { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 
-// --- TYPE DEFINITIONS ---
+/* --- CONFIGURATION & TYPES (API Ready) --- */
+// 🌟 RASPI API BASE URL
+const RASPI_API_BASE_URL = process.env.NEXT_PUBLIC_RASPI_API_URL || "http://192.168.1.100:3000/api/aquaponics"; // Default IP/Port
+
 interface PlantDetection { name: string; status: string; color: 'emerald' | 'amber'; }
 interface Snapshot { id: number; date: string; time: string; thumbnail: string; }
-interface SettingsState { resolution: string; fps: number; brightness: number; contrast: number; detectionSensitivity: number; autoFocus: boolean; nightMode: boolean; motionDetection: boolean; }
-interface ToastProps { message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default'; onClose: () => void; }
+interface CameraSettingsState {
+    resolution: string;
+    fps: number;
+    brightness: number;
+    contrast: number;
+    detectionSensitivity: number;
+    autoFocus: boolean;
+    nightMode: boolean;
+    motionDetection: boolean;
+}
+// FIXED: Added 'error' to ToastProps type
+interface ToastProps { message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default' | 'error'; onClose: () => void; }
 
-// --- MOCK DATA ---
+// --- MOCK DATA (Remains for UI structure/AI results) ---
 const PLANT_DETECTIONS: PlantDetection[] = [
     { name: "Kale #1", status: "Growing", color: "emerald" },
     { name: "Kale #2", status: "Growing", color: "emerald" },
@@ -20,7 +32,7 @@ const PLANT_DETECTIONS: PlantDetection[] = [
     { name: "Kale #4", status: "Growing", color: "emerald" }
 ]
 
-const GALLERY_SNAPSHOTS: Snapshot[] = [
+const GALLERY_SNAPSHOTS_MOCK: Snapshot[] = [
     { id: 1, date: "2024-11-19", time: "08:00 AM", thumbnail: "🌱" },
     { id: 2, date: "2024-11-18", time: "08:00 AM", thumbnail: "🌿" },
     { id: 3, date: "2024-11-17", time: "08:00 AM", thumbnail: "🥬" },
@@ -29,7 +41,158 @@ const GALLERY_SNAPSHOTS: Snapshot[] = [
     { id: 6, date: "2024-11-14", time: "08:00 AM", thumbnail: "🌿" },
 ]
 
-// --- Helper Functions ---
+// --- INITIAL STATE (If API fails) ---
+const INITIAL_CAMERA_SETTINGS: CameraSettingsState = {
+    resolution: "1080p", fps: 30, brightness: 50, contrast: 50,
+    detectionSensitivity: 75, autoFocus: true, nightMode: false, motionDetection: true,
+}
+
+
+/* --- RASPI API IMPLEMENTATIONS --- */
+
+/**
+ * 🌟 RASPI API: Fetch camera settings and initial state.
+ * Endpoint: GET /api/aquaponics/camera/settings
+ */
+const fetchCameraSettingsFromAPI = async (): Promise<{ settings: CameraSettingsState, isRecording: boolean }> => {
+    try {
+        const response = await fetch(`${RASPI_API_BASE_URL}/camera/settings`, { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
+        const data = await response.json();
+        // Assume API returns both settings object and current recording status
+        return {
+            settings: { ...INITIAL_CAMERA_SETTINGS, ...data.settings },
+            isRecording: data.isRecording ?? false
+        };
+    } catch (error) {
+        console.error('RASPI API ERROR: Failed to fetch camera settings:', error);
+        return { settings: INITIAL_CAMERA_SETTINGS, isRecording: false };
+    }
+};
+
+/**
+ * 🌟 RASPI API: Save camera settings.
+ * Endpoint: POST /api/aquaponics/camera/settings
+ */
+const saveCameraSettingsToAPI = async (settings: CameraSettingsState): Promise<boolean> => {
+    try {
+        const response = await fetch(`${RASPI_API_BASE_URL}/camera/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings),
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        return true;
+    } catch (error) {
+        console.error('RASPI API ERROR: Failed to save camera settings:', error);
+        return false;
+    }
+};
+
+/**
+ * 🌟 RASPI API: Toggle recording state.
+ * Endpoint: POST /api/aquaponics/camera/record
+ */
+const toggleRecordingAPI = async (shouldRecord: boolean): Promise<boolean> => {
+    try {
+        const response = await fetch(`${RASPI_API_BASE_URL}/camera/record`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: shouldRecord ? 'start' : 'stop' }),
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        return true;
+    } catch (error) {
+        console.error('RASPI API ERROR: Failed to toggle recording:', error);
+        return false;
+    }
+};
+
+/**
+ * 🌟 RASPI API: Trigger a download or view a snapshot.
+ * Note: This function remains simulated for front-end mock file download.
+ */
+const downloadSnapshotAPI = (snapshot: Snapshot): void => {
+    simulateDownloadFn('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
+};
+
+/**
+ * 🌟 RASPI API: Delete a snapshot.
+ * Endpoint: DELETE /api/aquaponics/camera/snapshot/:id
+ */
+const deleteSnapshotAPI = async (snapshotId: number): Promise<boolean> => {
+    try {
+        const response = await fetch(`${RASPI_API_BASE_URL}/camera/snapshot/${snapshotId}`, {
+            method: 'DELETE',
+        });
+        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+        return true;
+    } catch (error) {
+        console.error(`RASPI API ERROR: Failed to delete snapshot ${snapshotId}:`, error);
+        return false;
+    }
+};
+
+/* --- CUSTOM HOOK (API READY) --- */
+// MOVED: Defined the hook outside of the main component
+const useCameraSettings = (showToast: (message: string, color: 'success' | 'info' | 'warning' | 'default' | 'error') => void) => {
+    const [settings, setSettings] = useState<CameraSettingsState>(INITIAL_CAMERA_SETTINGS);
+    const [isRecording, setIsRecording] = useState<boolean>(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [hasChanges, setHasChanges] = useState(false);
+
+    const loadInitialState = useCallback(async () => {
+        setIsLoading(true);
+        const { settings: loadedSettings, isRecording: initialRecordingStatus } = await fetchCameraSettingsFromAPI();
+        setSettings(loadedSettings);
+        setIsRecording(initialRecordingStatus);
+        setIsLoading(false);
+    }, []);
+
+    useEffect(() => {
+        loadInitialState();
+    }, [loadInitialState]);
+
+    const handleSettingChange = (key: keyof CameraSettingsState, value: string | number | boolean): void => {
+        setSettings(prev => ({ ...prev, [key]: value as any }));
+        setHasChanges(true);
+    }
+
+    const handleSave = async (): Promise<boolean> => {
+        const success = await saveCameraSettingsToAPI(settings);
+        if (success) {
+            setHasChanges(false);
+            showToast("✅ Camera settings saved to Raspberry Pi!", 'success');
+        } else {
+            showToast("❌ Failed to save settings to Raspi.", 'error');
+        }
+        return success;
+    };
+
+    const handleToggleRecord = async (shouldRecord: boolean): Promise<boolean> => {
+        const success = await toggleRecordingAPI(shouldRecord);
+        if (success) {
+            setIsRecording(shouldRecord);
+            if (shouldRecord) {
+                showToast("🎥 Recording command sent to Raspi.", 'info');
+            } else {
+                showToast("⏹️ Stop recording command sent. File is processing...", 'success');
+            }
+        } else {
+            // FIXED: Now correctly calling showToast with 'error'
+            showToast("❌ Failed to send recording command to Raspi.", 'error');
+        }
+        return success;
+    };
+
+    return {
+        settings, isRecording, isLoading, hasChanges,
+        handleSettingChange, handleSave, handleToggleRecord
+    };
+};
+
+/* --- HELPER FUNCTIONS & COMPONENTS --- */
 const formatDuration = (seconds: number): string => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -58,20 +221,18 @@ const simulateDownloadFn = (mimeType: string, filename: string, contentLabel: st
     }, 10);
 }
 
-// --- Toast Component ---
 const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     if (!visible) return null;
-
     const baseClasses = "fixed bottom-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-xl shadow-2xl transition-all duration-300 z-[100] flex items-center space-x-3";
     let colorClasses = "";
-
+    // FIXED: Added 'error' styling
     switch (color) {
         case 'success': colorClasses = "bg-emerald-600 text-white"; break;
         case 'info': colorClasses = "bg-blue-600 text-white"; break;
         case 'warning': colorClasses = "bg-amber-600 text-white"; break;
+        case 'error': colorClasses = "bg-red-600 text-white"; break;
         default: colorClasses = "bg-gray-800 text-white";
     }
-
     return (
         <div className={`${baseClasses} ${colorClasses}`}>
             <span className="font-medium">{message}</span>
@@ -103,7 +264,7 @@ const BottomNavigation = () => {
         <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
             <div className="flex items-center justify-around py-3">
                 {tabs.map((tab) => {
-                    const isActive = pathname.startsWith(tab.href);
+                    const isActive = pathname?.startsWith(tab.href); // Added optional chaining
                     const Icon = tab.icon;
                     return (
                         <Link key={tab.id} href={tab.href} className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}>
@@ -118,82 +279,65 @@ const BottomNavigation = () => {
 };
 
 
-// --- Main App Component ---
+/* --- Main App Component (API Integrated) --- */
 
 export default function App() {
+    // Local UI State
     const [currentTime, setCurrentTime] = useState<Date>(new Date())
     const [showSettings, setShowSettings] = useState<boolean>(false)
     const [showGallery, setShowGallery] = useState<boolean>(false)
     const [selectedSnapshot, setSelectedSnapshot] = useState<Snapshot | null>(null)
-    const [isRecording, setIsRecording] = useState<boolean>(false);
     const [recordingDuration, setRecordingDuration] = useState<number>(0);
     const [zoomLevel, setZoomLevel] = useState<number>(1.0);
     const [showZoomControls, setShowZoomControls] = useState<boolean>(false);
+    const [gallerySnapshots, setGallerySnapshots] = useState<Snapshot[]>(GALLERY_SNAPSHOTS_MOCK);
 
-    const [settings, setSettings] = useState<SettingsState>({
-        resolution: "1080p",
-        fps: 30,
-        brightness: 50,
-        contrast: 50,
-        detectionSensitivity: 75,
-        autoFocus: true,
-        nightMode: false,
-        motionDetection: true,
-    })
+    // Toast State and Function
+    const [toast, setToast] = useState<{ message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default' | 'error' }>({ message: '', visible: false, color: 'info' });
 
-    const [toast, setToast] = useState<{ message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default' }>({ message: '', visible: false, color: 'info' });
-
-    const showToast = useCallback((message: string, color: 'success' | 'info' | 'warning' | 'default' = 'info'): void => {
+    // FIXED: Corrected the broken useCallback definition and added 'error' type
+    const showToast = useCallback((message: string, color: 'success' | 'info' | 'warning' | 'default' | 'error' = 'info'): void => {
         setToast({ message, visible: true, color });
         setTimeout(() => { setToast(prev => ({ ...prev, visible: false })); }, 3000);
     }, []);
 
-    useEffect(() => {
-        const interval = setInterval(() => { setCurrentTime(new Date()) }, 1000)
-        return () => clearInterval(interval)
-    }, [])
+    // Load initial settings and API functions via Hook
+    const {
+        settings, isRecording, isLoading, hasChanges,
+        handleSettingChange, handleSave, handleToggleRecord
+    } = useCameraSettings(showToast);
 
+
+    // Time and Recording Duration Ticker
     useEffect(() => {
-        let interval: NodeJS.Timeout | null = null;
+        const timeInterval = setInterval(() => { setCurrentTime(new Date()) }, 1000)
+        let recordInterval: NodeJS.Timeout | null = null;
+
         if (isRecording) {
-            interval = setInterval(() => { setRecordingDuration(prevDuration => prevDuration + 1); }, 1000);
+            recordInterval = setInterval(() => { setRecordingDuration(prevDuration => prevDuration + 1); }, 1000);
         } else if (!isRecording && recordingDuration > 0) {
-            if (recordingDuration >= 3) {
-                simulateDownloadFn('video/mp4', `kale_video_${new Date().toISOString()}.mp4`, 'Recorded Video', recordingDuration);
-            } else if (recordingDuration > 0) {
+            if (recordingDuration < 3) {
                 showToast("Recording too short, file discarded.", 'warning');
             }
             setRecordingDuration(0);
         }
-        return () => { if (interval) clearInterval(interval); };
+
+        return () => {
+            clearInterval(timeInterval);
+            if (recordInterval) clearInterval(recordInterval);
+        };
     }, [isRecording, recordingDuration, showToast]);
 
 
-    const handleSettingChange = (key: keyof SettingsState, value: string | number | boolean): void => {
-        setSettings(prev => ({ ...prev, [key]: value }))
-    }
-
-    // HANDLED DOWNLOAD: This function is now responsible for downloading the FULL VIEW snapshot
-    const handleDownload = (): void => {
-        if (selectedSnapshot) {
-            handleGalleryDownload(selectedSnapshot);
-        } else {
-            showToast("Error: No snapshot selected for download.", 'warning');
+    const handleSaveSettings = async (): Promise<void> => {
+        const success = await handleSave();
+        if (success) {
+            setShowSettings(false);
         }
     }
 
-    const handleSnapshot = (): void => {
-        showToast("Use the Gallery button to view and download snapshots.", 'info');
-    }
-
-    const handleRecord = (): void => {
-        if (isRecording) {
-            setIsRecording(false);
-        } else {
-            setRecordingDuration(0);
-            setIsRecording(true);
-            showToast("🎥 Recording started! Click the button again to stop.", 'info');
-        }
+    const handleRecord = async (): Promise<void> => {
+        await handleToggleRecord(!isRecording);
     }
 
     const handleZoomToggle = (): void => {
@@ -210,21 +354,35 @@ export default function App() {
     }
 
 
-    const handleSaveSettings = (): void => {
-        setShowSettings(false);
-        showToast("✅ Settings saved successfully!", 'success');
-    }
-
     const handleGalleryDownload = (snapshot: Snapshot): void => {
-        simulateDownloadFn('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
+        downloadSnapshotAPI(snapshot); // API wrapper call
         showToast(`Downloaded & saved: ${snapshot.date}`, 'success');
     }
 
-    const handleDelete = (): void => {
-        showToast("🗑️ Snapshot deleted successfully.", 'warning');
-        setSelectedSnapshot(null);
+    const handleDelete = async (): Promise<void> => {
+        if (!selectedSnapshot) return;
+
+        const success = await deleteSnapshotAPI(selectedSnapshot.id); // API call
+        if (success) {
+            setGallerySnapshots(prev => prev.filter(s => s.id !== selectedSnapshot.id)); // Update local UI
+            showToast("🗑️ Snapshot deleted successfully from Raspi.", 'warning');
+            setSelectedSnapshot(null);
+        } else {
+            showToast("❌ Failed to delete snapshot on Raspi.", 'error');
+        }
     }
 
+    // --- LOADING STATE ---
+    if (isLoading) {
+        return (
+            <div className="min-h-screen flex items-center justify-center max-w-md mx-auto bg-gray-50">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600 mx-auto mb-3"></div>
+                    <p className="text-gray-700 font-semibold">Loading camera configuration from Raspberry Pi...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
@@ -271,7 +429,6 @@ export default function App() {
                             </div>
                         </div>
                     </div>
-
                 </div>
 
                 {/* Zoom Slider Controls */}
@@ -395,7 +552,7 @@ export default function App() {
 
                         <div className="p-4">
                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                {GALLERY_SNAPSHOTS.map((snapshot) => (
+                                {gallerySnapshots.map((snapshot) => (
                                     <div key={snapshot.id} onClick={() => setSelectedSnapshot(snapshot)} className="bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200 hover:border-emerald-400 transition-all cursor-pointer shadow-md">
                                         <div className="aspect-square bg-gradient-to-br from-emerald-50/50 to-teal-100/50 flex items-center justify-center text-5xl sm:text-6xl">{snapshot.thumbnail}</div>
                                         <div className="p-3 bg-white"><div className="font-semibold text-gray-900 text-sm">{snapshot.date}</div><div className="text-xs text-gray-500">{snapshot.time}</div></div>
@@ -456,7 +613,16 @@ export default function App() {
                             {/* Motion Detection Toggle */}
                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200"><div><div className="font-semibold text-gray-900">Motion Detection</div><div className="text-xs text-gray-500">Alert on movement detection</div></div><label className="relative inline-block w-12 h-6"><input type="checkbox" checked={settings.motionDetection} onChange={(e) => handleSettingChange("motionDetection", e.target.checked)} className="sr-only peer" /><div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div></label></div>
                             {/* Save and Close Buttons */}
-                            <div className="space-y-3 pt-2"><button onClick={handleSaveSettings} className="w-full p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors shadow-lg hover:shadow-xl active:scale-[0.99]">Save Settings</button><button onClick={() => setShowSettings(false)} className="w-full p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close</button></div>
+                            <div className="space-y-3 pt-2">
+                                <button
+                                    onClick={handleSaveSettings}
+                                    disabled={!hasChanges}
+                                    className={`w-full p-4 font-bold rounded-xl transition-colors shadow-lg hover:shadow-xl active:scale-[0.99] ${hasChanges ? 'bg-emerald-500 hover:bg-emerald-600 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+                                >
+                                    {hasChanges ? 'Save Changes to Raspi' : 'Settings Synced'}
+                                </button>
+                                <button onClick={() => setShowSettings(false)} className="w-full p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close</button>
+                            </div>
                         </div>
                     </div>
                 </div>
