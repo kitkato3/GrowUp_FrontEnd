@@ -257,7 +257,6 @@ export default function Dashboard() {
   }
 
   const status = getOverallStatus(overallSeverity);
-  // ➡️ DITO PWEDE ILAGAY ANG checkRaspiConnection function
   const checkRaspiConnection = async () => {
     try {
       // ⚠️ TANDAAN: Palitan ang URL na ito sa actual na Raspi IP/Port at Status Endpoint
@@ -269,7 +268,7 @@ export default function Dashboard() {
       }
     } catch (error) {
       console.error("Raspberry Pi connection check failed:", error);
-      setIsCameraConnected(false); // Kung may network error
+      setIsCameraConnected(false);
     }
   };
   useEffect(() => {
@@ -422,7 +421,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        // Dashboard Preview
         <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
           <div className="bg-gray-900 aspect-video relative overflow-hidden group cursor-pointer" onClick={() => setShowCameraModal(true)}>
             {isCameraConnected ? (
