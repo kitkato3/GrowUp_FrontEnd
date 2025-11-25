@@ -2,14 +2,14 @@
 
 import { Camera, X, Download, Trash2, Maximize2, Home, BarChart3, Settings } from "lucide-react"
 import React, { useState, useEffect, useCallback } from "react"
-// NOTE: Next.js imports (Link and usePathname) are intentionally NOT imported,
-// as the user's original App.tsx uses state-based client-side routing.
+// Removed Next.js imports: Link and usePathname are replaced by local state and Div/Button elements.
 
 // --- CONFIGURATION ---
 const API_BASE_URL = "http://192.168.1.100:5000/api/v1"; // <<< CRITICAL: CHANGE THIS TO YOUR RASPI 5 IP AND PORT >>>
+const LIVE_STREAM_URL = "http://192.168.1.100:8080/stream"; // <<< CRITICAL: USE YOUR ACTUAL LIVE STREAM URL (e.g., mjpeg stream) >>>
 
 // --- TYPE DEFINITIONS ---
-type ScreenId = 'dashboard' | 'analytics' | 'camera' | 'settings'; // New type for screens
+type ScreenId = 'dashboard' | 'analytics' | 'camera' | 'settings';
 interface PlantDetection { id: string; name: string; status: string; color: 'emerald' | 'amber'; }
 interface Snapshot { id: number; date: string; time: string; thumbnail: string; image_url: string; }
 interface SettingsState { resolution: string; fps: number; brightness: number; contrast: number; detectionSensitivity: number; autoFocus: boolean; nightMode: boolean; motionDetection: boolean; }
@@ -17,7 +17,7 @@ interface ToastProps { message: string; visible: boolean; color: 'success' | 'in
 interface BackendData { detections: PlantDetection[]; snapshots: Snapshot[]; currentSettings: SettingsState; }
 
 
-// --- INITIAL EMPTY STATES (Used only for component initialization before API call) ---
+// --- INITIAL EMPTY STATES ---
 const EMPTY_SETTINGS: SettingsState = {
     resolution: "Connecting...",
     fps: 0,
@@ -29,7 +29,7 @@ const EMPTY_SETTINGS: SettingsState = {
     motionDetection: false,
 }
 
-// --- Helper Functions ---
+// --- Helper Functions (No changes) ---
 const formatDuration = (seconds: number): string => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
@@ -59,7 +59,7 @@ const simulateDownloadFn = (mimeType: string, filename: string, contentLabel: st
 }
 
 
-// --- Custom Hook for API Abstraction ---
+// --- Custom Hook for API Abstraction (No changes) ---
 const useApi = () => {
     const apiCall = useCallback(async (endpoint: string, options?: RequestInit) => {
         const url = `${API_BASE_URL}${endpoint}`;
@@ -85,7 +85,7 @@ const useApi = () => {
     return { apiCall };
 };
 
-// --- Toast Component ---
+// --- Toast Component (No changes) ---
 const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     if (!visible) return null;
 
@@ -107,7 +107,7 @@ const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     );
 };
 
-// --- Navbar Component ---
+// --- Navbar Component (No changes) ---
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
     <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
         <span className="font-bold text-gray-900">GROWUP</span>
@@ -118,9 +118,8 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
     </div>
 );
 
-// --- Bottom Navigation Component (Refined to ensure tabs match the Aquaponics Dashboard) ---
+// --- Bottom Navigation Component (No changes) ---
 const BottomNavigation: React.FC<{ activeTab: ScreenId; setActiveTab: (id: ScreenId) => void }> = ({ activeTab, setActiveTab }) => {
-    // These tabs are consistent with the Aquaponics Dashboard's tabs
     const tabs: { id: ScreenId; label: string; icon: React.ElementType }[] = [
         { id: "dashboard", label: "Home", icon: Home },
         { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -137,7 +136,7 @@ const BottomNavigation: React.FC<{ activeTab: ScreenId; setActiveTab: (id: Scree
                     return (
                         <div
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)} // Calls the state updater function from App
+                            onClick={() => setActiveTab(tab.id)}
                             className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all cursor-pointer ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
                         >
                             <Icon className="w-5 h-5 mb-1" />
@@ -156,8 +155,11 @@ export default function App() {
     const { apiCall } = useApi();
     const [currentTime, setCurrentTime] = useState<Date>(new Date())
 
-    // NEW: State for current screen - Initialized to 'camera' per original logic
+    // NEW: State for current screen
     const [currentScreen, setCurrentScreen] = useState<ScreenId>('camera');
+
+    // NEW STATE: Tracks if the Camera Feed is successfully connected and active.
+    const [isPiCameraActive, setIsPiCameraActive] = useState<boolean>(false);
 
     // API-Driven States, initialized to empty or connecting states
     const [plantDetections, setPlantDetections] = useState<PlantDetection[]>([]);
@@ -186,33 +188,36 @@ export default function App() {
         const fetchInitialData = async () => {
             setIsLoading(true);
             try {
-                // GET request to fetch initial status, settings, and gallery data
                 const data: BackendData = await apiCall("/status");
-
-                // Use data received from API
                 setPlantDetections(data.detections || []);
                 setGallerySnapshots(data.snapshots || []);
                 setSettings(data.currentSettings);
 
-                showToast("✅ Connected to Raspi Camera!", 'success');
+                if (data.currentSettings.resolution !== "Connecting...") {
+                    setIsPiCameraActive(true);
+                    showToast("✅ Connected to Raspi Camera!", 'success');
+                } else {
+                    setIsPiCameraActive(false);
+                    showToast("⚠️ Raspi connected, but camera is inactive.", 'warning');
+                }
+
             } catch (error) {
                 console.error("Connection error:", error);
+                setIsPiCameraActive(false);
                 showToast("🔴 Failed to connect to API. Is the server running?", 'warning');
-                setSettings(EMPTY_SETTINGS); // Reset settings to show connection failed status
+                setSettings(EMPTY_SETTINGS);
             } finally {
                 setIsLoading(false);
             }
         };
 
         fetchInitialData();
-
-        // Timer for clock update
         const interval = setInterval(() => { setCurrentTime(new Date()) }, 1000)
         return () => clearInterval(interval)
     }, [apiCall, showToast]);
 
 
-    // --- EFFECT: Recording Timer ---
+    // --- EFFECT: Recording Timer (No changes) ---
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isRecording) {
@@ -221,7 +226,6 @@ export default function App() {
             if (interval) clearInterval(interval);
 
             if (recordingDuration >= 3) {
-                // The API stop call in handleRecord should handle saving the file on the backend
                 simulateDownloadFn('video/mp4', `kale_video_${new Date().toISOString()}.mp4`, 'Recorded Video', recordingDuration);
             } else if (recordingDuration > 0) {
                 showToast("Recording too short, file discarded.", 'warning');
@@ -232,18 +236,18 @@ export default function App() {
     }, [isRecording, recordingDuration, showToast]);
 
 
-    // --- API HANDLERS ---
-
+    // --- API HANDLERS (No changes to the core logic) ---
     const handleSettingChange = (key: keyof SettingsState, value: string | number | boolean): void => {
         setSettings(prev => ({ ...prev, [key]: value }))
     }
 
     const handleSnapshot = async (): Promise<void> => {
+        if (!isPiCameraActive) {
+            showToast("Camera is not active. Cannot take snapshot.", 'warning');
+            return;
+        }
         try {
-            // POST request to trigger the camera snapshot
             const newSnapshot: Snapshot = await apiCall("/camera/snapshot", { method: 'POST' });
-
-            // Add the new snapshot (returned from the API) to the state
             setGallerySnapshots(prev => [newSnapshot, ...prev]);
             showToast("📸 Snapshot taken successfully!", 'success');
         } catch (error) {
@@ -252,19 +256,19 @@ export default function App() {
     }
 
     const handleRecord = async (): Promise<void> => {
+        if (!isPiCameraActive) {
+            showToast("Camera is not active. Cannot start recording.", 'warning');
+            return;
+        }
         if (isRecording) {
-            // STOP RECORDING
             setIsRecording(false);
             try {
-                // POST request to stop recording
                 await apiCall("/camera/record/stop", { method: 'POST' });
             } catch (error) {
                 showToast("Failed to stop recording cleanly.", 'warning');
             }
         } else {
-            // START RECORDING
             try {
-                // POST request to start recording
                 await apiCall("/camera/record/start", { method: 'POST' });
                 setRecordingDuration(0);
                 setIsRecording(true);
@@ -291,13 +295,12 @@ export default function App() {
 
     const handleSaveSettings = async (): Promise<void> => {
         try {
-            // PUT request to update settings on the Raspi
             const updatedSettings: SettingsState = await apiCall("/settings", {
                 method: 'PUT',
-                body: JSON.stringify(settings) // Send the current settings state as JSON
+                body: JSON.stringify(settings)
             });
 
-            setSettings(updatedSettings); // Update state with the backend's confirmed settings
+            setSettings(updatedSettings);
             setShowSettingsModal(false);
             showToast("✅ Settings saved successfully!", 'success');
         } catch (error) {
@@ -306,8 +309,6 @@ export default function App() {
     }
 
     const handleGalleryDownload = (snapshot: Snapshot): void => {
-        // This simulates accessing the file using the URL provided by the backend.
-        // In a real scenario, you'd use snapshot.image_url for download.
         simulateDownloadFn('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
         showToast(`Downloaded & saved: ${snapshot.date}`, 'success');
     }
@@ -316,13 +317,9 @@ export default function App() {
         if (!selectedSnapshot) return;
 
         try {
-            // DELETE request to remove the snapshot file on the server/storage
             await apiCall(`/gallery/${selectedSnapshot.id}`, { method: 'DELETE' });
-
-            // Remove from local state
             setGallerySnapshots(prev => prev.filter(s => s.id !== selectedSnapshot.id));
             setSelectedSnapshot(null);
-
             showToast("🗑️ Snapshot deleted successfully.", 'warning');
         } catch (error) {
             showToast("Failed to delete snapshot. Try again.", 'warning');
@@ -331,6 +328,25 @@ export default function App() {
 
     // --- SCREEN RENDERING LOGIC ---
     const renderScreenContent = () => {
+        const liveFeedContent = isPiCameraActive ? (
+            // Live Feed: Pi Camera is Active (show image/mjpeg stream)
+            <img
+                src={LIVE_STREAM_URL}
+                alt="Live Kale Tower Feed"
+                className="w-full h-full object-cover"
+                style={{ filter: isRecording ? 'brightness(0.9)' : 'brightness(1.0)' }}
+            />
+        ) : (
+            // Static Placeholder: Pi Camera is Inactive (show gradient/icon)
+            <div className="absolute inset-0 bg-gradient-to-br from-red-900/30 to-rose-900/30 flex items-center justify-center">
+                <div className="text-center text-white">
+                    <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                    <div className="text-lg font-semibold">Live Kale Tower Feed</div>
+                    <div className="text-sm opacity-70 text-red-300">Camera Disconnected/Inactive</div>
+                </div>
+            </div>
+        );
+
         switch (currentScreen) {
             case 'dashboard':
                 return (
@@ -354,12 +370,10 @@ export default function App() {
                         <Settings className="w-8 h-8 mx-auto text-orange-500 mb-2" />
                         <h2 className="text-xl font-bold text-gray-800">Device Settings</h2>
                         <p className="text-gray-500 mt-2">Gamitin ang "Advanced Settings" button upang mabago ang configuration.</p>
-                        {/* The modal is opened automatically by the BottomNavigation logic */}
                     </div>
                 );
             case 'camera':
             default:
-                // Default is the main Camera Monitor View
                 return (
                     <>
                         <h1 className="text-3xl font-extrabold text-gray-800 pt-2">
@@ -374,13 +388,7 @@ export default function App() {
                                 className="absolute inset-0 transition-transform duration-300 ease-in-out"
                                 style={{ transform: `scale(${zoomLevel})` }}
                             >
-                                <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
-                                    <div className="text-center text-white">
-                                        <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                                        <div className="text-lg font-semibold">Live Kale Tower Feed</div>
-                                        <div className="text-sm opacity-70">AI Plant Detection Active</div>
-                                    </div>
-                                </div>
+                                {liveFeedContent}
 
                                 {/* Recording Duration Indicator */}
                                 {isRecording && (
@@ -390,7 +398,7 @@ export default function App() {
                                 )}
 
                                 {/* Live/Recording indicator */}
-                                <div className="absolute top-4 right-4 w-4 h-4 rounded-full shadow-md bg-green-500 animate-pulse"></div>
+                                <div className={`absolute top-4 right-4 w-4 h-4 rounded-full shadow-md ${isPiCameraActive ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
 
                                 {/* Time and Specs */}
                                 <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
@@ -398,7 +406,7 @@ export default function App() {
                                         {currentTime.toLocaleTimeString()}
                                     </div>
                                     <div className="text-xs text-gray-300">
-                                        {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : 'Live'}
+                                        {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : isPiCameraActive ? 'Live' : 'Inactive'}
                                     </div>
                                 </div>
                             </div>
@@ -485,7 +493,7 @@ export default function App() {
                                 <button
                                     onClick={handleSnapshot}
                                     className="p-4 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                                    disabled={isLoading}
+                                    disabled={isLoading || !isPiCameraActive}
                                 >
                                     📸 Take Snapshot
                                 </button>
@@ -495,7 +503,7 @@ export default function App() {
                                         ? "bg-red-500 hover:bg-red-600 text-white"
                                         : "bg-blue-100 hover:bg-blue-200 text-blue-700"
                                         }`}
-                                    disabled={isLoading}
+                                    disabled={isLoading || !isPiCameraActive}
                                 >
                                     {isRecording ? (
                                         <span className="inline-flex items-center gap-2">
@@ -540,14 +548,13 @@ export default function App() {
             </div>
 
             <BottomNavigation activeTab={currentScreen} setActiveTab={(id) => {
-                // Logic: Set the new screen ID
+                // Logic: I-set ang screen ID para lumipat ng content
                 setCurrentScreen(id);
 
-                // Logic: If the user clicks 'Settings' on the bottom nav, open the modal immediately.
+                // Logic: Awtomatikong buksan/isara ang Modal
                 if (id === 'settings') {
                     setShowSettingsModal(true);
                 } else {
-                    // Ensure the modal is closed when navigating away from the settings screen
                     setShowSettingsModal(false);
                 }
             }} />
