@@ -177,7 +177,7 @@ export default function App() {
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     // UI States
-    const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false) // Renamed to avoid conflict
+    const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false)
     const [showGallery, setShowGallery] = useState<boolean>(false)
     const [selectedSnapshot, setSelectedSnapshot] = useState<Snapshot | null>(null)
     const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -360,12 +360,12 @@ export default function App() {
                     </div>
                 );
             case 'settings':
-                // Note: Settings tab navigation automatically opens the modal, but this content is here for completeness.
                 return (
                     <div className="p-4 text-center bg-white rounded-2xl shadow-xl mt-4">
                         <Settings className="w-8 h-8 mx-auto text-orange-500 mb-2" />
                         <h2 className="text-xl font-bold text-gray-800">Device Settings</h2>
                         <p className="text-gray-500 mt-2">Gamitin ang "Advanced Settings" button upang mabago ang configuration.</p>
+                        {/* The modal is opened automatically by the BottomNavigation logic */}
                     </div>
                 );
             case 'camera':
@@ -528,7 +528,7 @@ export default function App() {
                                 </button>
                             </div>
                             <button
-                                onClick={() => setShowSettingsModal(true)} // Note: Changed to setShowSettingsModal
+                                onClick={() => setShowSettingsModal(true)}
                                 className="w-full mt-3 p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                                 disabled={isLoading}
                             >
@@ -551,10 +551,15 @@ export default function App() {
             </div>
 
             <BottomNavigation activeTab={currentScreen} setActiveTab={(id) => {
+                // Logic: Set the new screen ID
                 setCurrentScreen(id);
-                // Automatically open settings modal if settings tab is clicked
+
+                // Logic: If the user clicks 'Settings' on the bottom nav, open the modal immediately.
                 if (id === 'settings') {
                     setShowSettingsModal(true);
+                } else {
+                    // Ensure the modal is closed when navigating away from the settings screen
+                    setShowSettingsModal(false);
                 }
             }} />
 
