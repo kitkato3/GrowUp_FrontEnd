@@ -260,7 +260,7 @@ export default function Dashboard() {
   const checkRaspiConnection = async () => {
     try {
       // ⚠️ TANDAAN: Palitan ang URL na ito sa actual na Raspi IP/Port at Status Endpoint
-      const statusResponse = await fetch("http://192.168.1.10:5000/api/status");
+      const statusResponse = await fetch("http://192.168.1.50:8000/api/status");
       if (statusResponse.ok) {
         setIsCameraConnected(true);
       } else {
@@ -278,7 +278,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchSensorData = async () => {
       try {
-        const API_URL = "http://[YOUR_RASPI_IP]:[YOUR_PORT]/api/sensors";
+        const API_URL = "http://192.168.1.50:8000/api/sensors";
         const response = await fetch(API_URL);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -302,7 +302,7 @@ export default function Dashboard() {
 
   const handleQuickControlsSave = async () => {
     try {
-      const API_URL = "http://[YOUR_RASPI_IP]:[YOUR_PORT]/api/controls";
+      const API_URL = "http://192.168.1.50:8000/api/controls";
 
       const response = await fetch(API_URL, {
         method: 'POST',
