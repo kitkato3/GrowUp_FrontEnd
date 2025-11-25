@@ -2,31 +2,40 @@
 
 import { Camera, X, Download, Trash2, Maximize2, Home, BarChart3, Settings } from "lucide-react"
 import React, { useState, useEffect, useCallback } from "react"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+// Removed Next.js imports: Link and usePathname are replaced by local state and Div/Button elements.
+
+// --- CONFIGURATION ---
+const API_BASE_URL = "http://192.168.1.100:5000/api/v1"; // <<< CRITICAL: CHANGE THIS TO YOUR RASPI 5 IP AND PORT >>>
 
 // --- TYPE DEFINITIONS ---
-interface PlantDetection { name: string; status: string; color: 'emerald' | 'amber'; }
-interface Snapshot { id: number; date: string; time: string; thumbnail: string; }
+interface PlantDetection { id: string; name: string; status: string; color: 'emerald' | 'amber'; }
+interface Snapshot { id: number; date: string; time: string; thumbnail: string; image_url: string; }
 interface SettingsState { resolution: string; fps: number; brightness: number; contrast: number; detectionSensitivity: number; autoFocus: boolean; nightMode: boolean; motionDetection: boolean; }
 interface ToastProps { message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default'; onClose: () => void; }
+interface BackendData { detections: PlantDetection[]; snapshots: Snapshot[]; currentSettings: SettingsState; }
 
-// --- MOCK DATA ---
-const PLANT_DETECTIONS: PlantDetection[] = [
-    { name: "Kale #1", status: "Growing", color: "emerald" },
-    { name: "Kale #2", status: "Growing", color: "emerald" },
-    { name: "Kale #3", status: "Growing", color: "emerald" },
-    { name: "Kale #4", status: "Growing", color: "emerald" }
-]
 
-const GALLERY_SNAPSHOTS: Snapshot[] = [
-    { id: 1, date: "2024-11-19", time: "08:00 AM", thumbnail: "🌱" },
-    { id: 2, date: "2024-11-18", time: "08:00 AM", thumbnail: "🌿" },
-    { id: 3, date: "2024-11-17", time: "08:00 AM", thumbnail: "🥬" },
-    { id: 4, date: "2024-11-16", time: "08:00 AM", thumbnail: "🍃" },
-    { id: 5, date: "2024-11-15", time: "08:00 AM", thumbnail: "🌱" },
-    { id: 6, date: "2024-11-14", time: "08:00 AM", thumbnail: "🌿" },
-]
+// --- DETECTION DATA STRUCTURE REFERENCE (HINDI GINAGAMIT BILANG INITIAL MOCK DATA) ---
+const MOCK_DETECTION_REFERENCE: PlantDetection[] = [
+    { id: "k1", name: "Kale #1", status: "Growing", color: "emerald" },
+    { id: "k2", name: "Kale #2", status: "Growing", color: "emerald" },
+    { id: "k3", name: "Kale #3", status: "Growth Alert", color: "amber" },
+    { id: "k4", name: "Kale #4", status: "Growing", color: "emerald" }
+];
+// Ang data na ito ay inaasahang matatanggap mula sa API endpoint /status.
+
+
+// --- INITIAL EMPTY STATES (Used only for component initialization before API call) ---
+const EMPTY_SETTINGS: SettingsState = {
+    resolution: "Connecting...",
+    fps: 0,
+    brightness: 0,
+    contrast: 0,
+    detectionSensitivity: 0,
+    autoFocus: false,
+    nightMode: false,
+    motionDetection: false,
+}
 
 // --- Helper Functions ---
 const formatDuration = (seconds: number): string => {
@@ -40,6 +49,7 @@ const formatDuration = (seconds: number): string => {
     return formatted.startsWith("0") && formatted.length > 2 ? formatted.substring(1) : formatted;
 }
 
+// Simulation function for mock downloads (kept for environment compatibility)
 const simulateDownloadFn = (mimeType: string, filename: string, contentLabel: string, duration?: number): void => {
     let mockContent = `Mock ${contentLabel} data captured at ${new Date().toLocaleString()}.`;
     if (duration) { mockContent += ` Duration: ${formatDuration(duration)}.`; }
@@ -56,6 +66,35 @@ const simulateDownloadFn = (mimeType: string, filename: string, contentLabel: st
         URL.revokeObjectURL(url);
     }, 10);
 }
+
+
+// --- Custom Hook for API Abstraction ---
+const useApi = () => {
+    const apiCall = useCallback(async (endpoint: string, options?: RequestInit) => {
+        const url = `${API_BASE_URL}${endpoint}`;
+        try {
+            const response = await fetch(url, {
+                headers: { 'Content-Type': 'application/json' },
+                ...options,
+            });
+            if (!response.ok) {
+                // Throw an error with status code and text
+                const errorText = await response.text();
+                throw new Error(`HTTP error! Status: ${response.status}. Message: ${errorText.substring(0, 100)}`);
+            }
+            // Attempt to parse JSON, handle 204 No Content
+            if (response.status === 204 || response.headers.get('content-length') === '0') {
+                return null;
+            }
+            return await response.json();
+        } catch (error) {
+            console.error("API Call Error:", url, error);
+            throw error;
+        }
+    }, []);
+
+    return { apiCall };
+};
 
 // --- Toast Component ---
 const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
@@ -79,6 +118,7 @@ const Toast: React.FC<ToastProps> = ({ message, visible, color, onClose }) => {
     );
 };
 
+// --- Navbar Component ---
 const Navbar: React.FC<{ time: string }> = ({ time }) => (
     <div className="bg-white px-4 py-2.5 flex items-center justify-between text-sm border-b border-gray-100 sticky top-0 z-40">
         <span className="font-bold text-gray-900">GROWUP</span>
@@ -89,9 +129,13 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
     </div>
 );
 
+// --- Bottom Navigation Component (Replaced Next.js with internal state) ---
 const BottomNavigation = () => {
-    const pathname = usePathname();
+    // Simulate active route by managing state internally
+    const [activeTab, setActiveTab] = useState<string>('camera');
+
     const tabs = [
+        // href is kept for conceptual routes but not used for navigation in this file
         { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
         { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
         { id: "camera", label: "Camera", href: "/camera", icon: Camera },
@@ -102,13 +146,18 @@ const BottomNavigation = () => {
         <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 shadow-lg z-50">
             <div className="flex items-center justify-around py-3">
                 {tabs.map((tab) => {
-                    const isActive = pathname.startsWith(tab.href);
+                    const isActive = activeTab === tab.id;
                     const Icon = tab.icon;
                     return (
-                        <Link key={tab.id} href={tab.href} className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}>
+                        // Used Div/Button instead of Next.js Link
+                        <div
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all cursor-pointer ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
+                        >
                             <Icon className="w-5 h-5 mb-1" />
                             <span className="text-xs font-semibold">{tab.label}</span>
-                        </Link>
+                        </div>
                     );
                 })}
             </div>
@@ -118,9 +167,17 @@ const BottomNavigation = () => {
 
 
 // --- Main App Component ---
-
 export default function App() {
+    const { apiCall } = useApi();
     const [currentTime, setCurrentTime] = useState<Date>(new Date())
+
+    // API-Driven States, initialized to empty or connecting states
+    const [plantDetections, setPlantDetections] = useState<PlantDetection[]>([]);
+    const [gallerySnapshots, setGallerySnapshots] = useState<Snapshot[]>([]);
+    const [settings, setSettings] = useState<SettingsState>(EMPTY_SETTINGS);
+    const [isLoading, setIsLoading] = useState<boolean>(true);
+
+    // UI States
     const [showSettings, setShowSettings] = useState<boolean>(false)
     const [showGallery, setShowGallery] = useState<boolean>(false)
     const [selectedSnapshot, setSelectedSnapshot] = useState<Snapshot | null>(null)
@@ -129,17 +186,6 @@ export default function App() {
     const [zoomLevel, setZoomLevel] = useState<number>(1.0);
     const [showZoomControls, setShowZoomControls] = useState<boolean>(false);
 
-    const [settings, setSettings] = useState<SettingsState>({
-        resolution: "1080p",
-        fps: 30,
-        brightness: 50,
-        contrast: 50,
-        detectionSensitivity: 75,
-        autoFocus: true,
-        nightMode: false,
-        motionDetection: true,
-    })
-
     const [toast, setToast] = useState<{ message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default' }>({ message: '', visible: false, color: 'info' });
 
     const showToast = useCallback((message: string, color: 'success' | 'info' | 'warning' | 'default' = 'info'): void => {
@@ -147,17 +193,47 @@ export default function App() {
         setTimeout(() => { setToast(prev => ({ ...prev, visible: false })); }, 3000);
     }, []);
 
+    // --- EFFECT: Initial Data Fetch and Timer ---
     useEffect(() => {
+        const fetchInitialData = async () => {
+            setIsLoading(true);
+            try {
+                // GET request to fetch initial status, settings, and gallery data
+                const data: BackendData = await apiCall("/status");
+
+                // Use data received from API
+                setPlantDetections(data.detections || []);
+                setGallerySnapshots(data.snapshots || []);
+                setSettings(data.currentSettings);
+
+                showToast("✅ Connected to Raspi Camera!", 'success');
+            } catch (error) {
+                console.error("Connection error:", error);
+                showToast("🔴 Failed to connect to API. Is the server running?", 'warning');
+                setSettings(EMPTY_SETTINGS); // Reset settings to show connection failed status
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchInitialData();
+
+        // Timer for clock update
         const interval = setInterval(() => { setCurrentTime(new Date()) }, 1000)
         return () => clearInterval(interval)
-    }, [])
+    }, [apiCall, showToast]);
 
+
+    // --- EFFECT: Recording Timer ---
     useEffect(() => {
         let interval: NodeJS.Timeout | null = null;
         if (isRecording) {
             interval = setInterval(() => { setRecordingDuration(prevDuration => prevDuration + 1); }, 1000);
         } else if (!isRecording && recordingDuration > 0) {
+            if (interval) clearInterval(interval);
+
             if (recordingDuration >= 3) {
+                // The API stop call in handleRecord should handle saving the file on the backend
                 simulateDownloadFn('video/mp4', `kale_video_${new Date().toISOString()}.mp4`, 'Recorded Video', recordingDuration);
             } else if (recordingDuration > 0) {
                 showToast("Recording too short, file discarded.", 'warning');
@@ -168,30 +244,46 @@ export default function App() {
     }, [isRecording, recordingDuration, showToast]);
 
 
+    // --- API HANDLERS ---
+
     const handleSettingChange = (key: keyof SettingsState, value: string | number | boolean): void => {
         setSettings(prev => ({ ...prev, [key]: value }))
     }
 
-    // HANDLED DOWNLOAD: This function is now responsible for downloading the FULL VIEW snapshot
-    const handleDownload = (): void => {
-        if (selectedSnapshot) {
-            handleGalleryDownload(selectedSnapshot);
-        } else {
-            showToast("Error: No snapshot selected for download.", 'warning');
+    const handleSnapshot = async (): Promise<void> => {
+        try {
+            // POST request to trigger the camera snapshot
+            const newSnapshot: Snapshot = await apiCall("/camera/snapshot", { method: 'POST' });
+
+            // Add the new snapshot (returned from the API) to the state
+            setGallerySnapshots(prev => [newSnapshot, ...prev]);
+            showToast("📸 Snapshot taken successfully!", 'success');
+        } catch (error) {
+            showToast("Failed to take snapshot. Check camera connection.", 'warning');
         }
     }
 
-    const handleSnapshot = (): void => {
-        showToast("Use the Gallery button to view and download snapshots.", 'info');
-    }
-
-    const handleRecord = (): void => {
+    const handleRecord = async (): Promise<void> => {
         if (isRecording) {
+            // STOP RECORDING
             setIsRecording(false);
+            try {
+                // POST request to stop recording
+                await apiCall("/camera/record/stop", { method: 'POST' });
+            } catch (error) {
+                showToast("Failed to stop recording cleanly.", 'warning');
+            }
         } else {
-            setRecordingDuration(0);
-            setIsRecording(true);
-            showToast("🎥 Recording started! Click the button again to stop.", 'info');
+            // START RECORDING
+            try {
+                // POST request to start recording
+                await apiCall("/camera/record/start", { method: 'POST' });
+                setRecordingDuration(0);
+                setIsRecording(true);
+                showToast("🎥 Recording started! Click the button again to stop.", 'info');
+            } catch (error) {
+                showToast("Failed to start recording. System busy?", 'warning');
+            }
         }
     }
 
@@ -209,19 +301,44 @@ export default function App() {
     }
 
 
-    const handleSaveSettings = (): void => {
-        setShowSettings(false);
-        showToast("✅ Settings saved successfully!", 'success');
+    const handleSaveSettings = async (): Promise<void> => {
+        try {
+            // PUT request to update settings on the Raspi
+            const updatedSettings: SettingsState = await apiCall("/settings", {
+                method: 'PUT',
+                body: JSON.stringify(settings) // Send the current settings state as JSON
+            });
+
+            setSettings(updatedSettings); // Update state with the backend's confirmed settings
+            setShowSettings(false);
+            showToast("✅ Settings saved successfully!", 'success');
+        } catch (error) {
+            showToast("Failed to save settings. Connection error.", 'warning');
+        }
     }
 
     const handleGalleryDownload = (snapshot: Snapshot): void => {
+        // This simulates accessing the file using the URL provided by the backend.
+        // In a real scenario, you'd use snapshot.image_url for download.
         simulateDownloadFn('image/png', `kale_gallery_snapshot_${snapshot.id}_${snapshot.date.replace(/-/g, '')}.png`, `Gallery Snapshot ID ${snapshot.id}`);
         showToast(`Downloaded & saved: ${snapshot.date}`, 'success');
     }
 
-    const handleDelete = (): void => {
-        showToast("🗑️ Snapshot deleted successfully.", 'warning');
-        setSelectedSnapshot(null);
+    const handleDelete = async (): Promise<void> => {
+        if (!selectedSnapshot) return;
+
+        try {
+            // DELETE request to remove the snapshot file on the server/storage
+            await apiCall(`/gallery/${selectedSnapshot.id}`, { method: 'DELETE' });
+
+            // Remove from local state
+            setGallerySnapshots(prev => prev.filter(s => s.id !== selectedSnapshot.id));
+            setSelectedSnapshot(null);
+
+            showToast("🗑️ Snapshot deleted successfully.", 'warning');
+        } catch (error) {
+            showToast("Failed to delete snapshot. Try again.", 'warning');
+        }
     }
 
 
@@ -258,7 +375,7 @@ export default function App() {
                         )}
 
                         {/* Live/Recording indicator */}
-                        <div className={`absolute top-4 right-4 w-4 h-4 rounded-full shadow-md ${isRecording ? 'bg-red-600 animate-pulse' : 'bg-green-500'}`}></div>
+                        <div className="absolute top-4 right-4 w-4 h-4 rounded-full shadow-md bg-green-500 animate-pulse"></div>
 
                         {/* Time and Specs */}
                         <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
@@ -270,6 +387,13 @@ export default function App() {
                             </div>
                         </div>
                     </div>
+
+                    {/* Loading Spinner Overlay */}
+                    {isLoading && (
+                        <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center text-white text-xl font-bold backdrop-blur-sm z-10">
+                            Connecting to Camera... 🔄
+                        </div>
+                    )}
 
                 </div>
 
@@ -301,27 +425,33 @@ export default function App() {
                         <span className="text-emerald-500">AI</span> Plant Health Status
                     </h3>
                     <div className="space-y-3">
-                        {PLANT_DETECTIONS.map((plant, idx) => (
-                            <div
-                                key={idx}
-                                className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
-                                    ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
-                                    : "bg-amber-50 border border-amber-200 hover:shadow-md"
-                                    }`}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div
-                                        className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
-                                    ></div>
-                                    <span className="font-medium text-gray-900">{plant.name}</span>
-                                </div>
-                                <span
-                                    className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
+                        {isLoading ? (
+                            <p className="text-gray-500 text-sm italic">Loading detection results...</p>
+                        ) : plantDetections.length === 0 ? (
+                            <p className="text-gray-500 text-sm italic">No plants detected or initialized yet.</p>
+                        ) : (
+                            plantDetections.map((plant) => (
+                                <div
+                                    key={plant.id}
+                                    className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
+                                        ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
+                                        : "bg-amber-50 border border-amber-200 hover:shadow-md"
+                                        }`}
                                 >
-                                    {plant.status}
-                                </span>
-                            </div>
-                        ))}
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
+                                        ></div>
+                                        <span className="font-medium text-gray-900">{plant.name}</span>
+                                    </div>
+                                    <span
+                                        className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
+                                    >
+                                        {plant.status}
+                                    </span>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
 
@@ -335,7 +465,14 @@ export default function App() {
                             onClick={() => setShowGallery(true)}
                             className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                         >
-                            🖼️ Gallery
+                            🖼️ Gallery ({gallerySnapshots.length})
+                        </button>
+                        <button
+                            onClick={handleSnapshot}
+                            className="p-4 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                            disabled={isLoading}
+                        >
+                            📸 Take Snapshot
                         </button>
                         <button
                             onClick={handleRecord}
@@ -343,6 +480,7 @@ export default function App() {
                                 ? "bg-red-500 hover:bg-red-600 text-white"
                                 : "bg-blue-100 hover:bg-blue-200 text-blue-700"
                                 }`}
+                            disabled={isLoading}
                         >
                             {isRecording ? (
                                 <span className="inline-flex items-center gap-2">
@@ -362,13 +500,14 @@ export default function App() {
                         >
                             🔍 Zoom ({zoomLevel.toFixed(1)}x)
                         </button>
-                        <button
-                            onClick={() => setShowSettings(true)}
-                            className="p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                        >
-                            ⚙️ Settings
-                        </button>
                     </div>
+                    <button
+                        onClick={() => setShowSettings(true)}
+                        className="w-full mt-3 p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                        disabled={isLoading}
+                    >
+                        ⚙️ Advanced Settings
+                    </button>
                 </div>
 
             </div>
@@ -388,19 +527,23 @@ export default function App() {
                 <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-2xl">
-                            <div><h2 className="text-xl font-bold text-gray-900">Snapshot Gallery</h2><p className="text-sm text-gray-500">Automatic 8:00 AM captures</p></div>
+                            <div><h2 className="text-xl font-bold text-gray-900">Snapshot Gallery</h2><p className="text-sm text-gray-500">Daily captures</p></div>
                             <button onClick={() => setShowGallery(false)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full"><X className="w-6 h-6" /></button>
                         </div>
 
                         <div className="p-4">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                                {GALLERY_SNAPSHOTS.map((snapshot) => (
-                                    <div key={snapshot.id} onClick={() => setSelectedSnapshot(snapshot)} className="bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200 hover:border-emerald-400 transition-all cursor-pointer shadow-md">
-                                        <div className="aspect-square bg-gradient-to-br from-emerald-50/50 to-teal-100/50 flex items-center justify-center text-5xl sm:text-6xl">{snapshot.thumbnail}</div>
-                                        <div className="p-3 bg-white"><div className="font-semibold text-gray-900 text-sm">{snapshot.date}</div><div className="text-xs text-gray-500">{snapshot.time}</div></div>
-                                    </div>
-                                ))}
-                            </div>
+                            {gallerySnapshots.length === 0 ? (
+                                <p className="text-gray-500 text-center py-8">No snapshots found on the server.</p>
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                                    {gallerySnapshots.map((snapshot) => (
+                                        <div key={snapshot.id} onClick={() => setSelectedSnapshot(snapshot)} className="bg-gray-100 rounded-xl overflow-hidden border-2 border-gray-200 hover:border-emerald-400 transition-all cursor-pointer shadow-md">
+                                            <div className="aspect-square bg-gradient-to-br from-emerald-50/50 to-teal-100/50 flex items-center justify-center text-5xl sm:text-6xl">{snapshot.thumbnail}</div>
+                                            <div className="p-3 bg-white"><div className="font-semibold text-gray-900 text-sm">{snapshot.date}</div><div className="text-xs text-gray-500">{snapshot.time}</div></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                             <button onClick={() => setShowGallery(false)} className="w-full mt-4 p-3 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close Gallery</button>
                         </div>
                     </div>
@@ -416,18 +559,17 @@ export default function App() {
                             <button onClick={() => { setSelectedSnapshot(null); setShowGallery(false); }} className="text-white hover:text-red-500 transition-colors p-2 rounded-full"><X className="w-8 h-8" /></button>
                         </div>
                         <div className="bg-white rounded-2xl shadow-2xl overflow-y-auto flex-grow min-h-0">
-                            {selectedSnapshot ? (<>
-                                <div className="aspect-square bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-[8rem] sm:text-[10rem]">{selectedSnapshot.thumbnail}</div>
-                                <div className="p-6 bg-white">
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Snapshot - {selectedSnapshot.date}</h3>
-                                    <p className="text-gray-500 mb-4">Captured at {selectedSnapshot.time}</p>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <button onClick={() => handleGalleryDownload(selectedSnapshot)} className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Download className="w-5 h-5" />Download</button>
-                                        <button onClick={handleDelete} className="p-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Trash2 className="w-5 h-5" />Delete</button>
-                                    </div>
-                                    <button onClick={() => { setSelectedSnapshot(null); setShowGallery(false); }} className="w-full mt-4 p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close & Exit</button>
+                            {/* NOTE: You would display the actual image using selectedSnapshot.image_url here */}
+                            <div className="aspect-square bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center text-[8rem] sm:text-[10rem]">{selectedSnapshot.thumbnail}</div>
+                            <div className="p-6 bg-white">
+                                <h3 className="text-2xl font-bold text-gray-900 mb-2">Snapshot - {selectedSnapshot.date}</h3>
+                                <p className="text-gray-500 mb-4">Captured at {selectedSnapshot.time}</p>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button onClick={() => handleGalleryDownload(selectedSnapshot)} className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Download className="w-5 h-5" />Download</button>
+                                    <button onClick={handleDelete} className="p-4 bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 active:scale-[0.98]"><Trash2 className="w-5 h-5" />Delete</button>
                                 </div>
-                            </>) : null}
+                                <button onClick={() => { setSelectedSnapshot(null); setShowGallery(false); }} className="w-full mt-4 p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close & Exit</button>
+                            </div>
                         </div>
                     </div>
                 </div>
