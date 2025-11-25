@@ -8,6 +8,7 @@ import React, { useState, useEffect, useCallback } from "react"
 const API_BASE_URL = "http://192.168.1.100:5000/api/v1"; // <<< CRITICAL: CHANGE THIS TO YOUR RASPI 5 IP AND PORT >>>
 
 // --- TYPE DEFINITIONS ---
+type ScreenId = 'dashboard' | 'analytics' | 'camera' | 'settings'; // New type for screens
 interface PlantDetection { id: string; name: string; status: string; color: 'emerald' | 'amber'; }
 interface Snapshot { id: number; date: string; time: string; thumbnail: string; image_url: string; }
 interface SettingsState { resolution: string; fps: number; brightness: number; contrast: number; detectionSensitivity: number; autoFocus: boolean; nightMode: boolean; motionDetection: boolean; }
@@ -129,17 +130,13 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
     </div>
 );
 
-// --- Bottom Navigation Component (Replaced Next.js with internal state) ---
-const BottomNavigation = () => {
-    // Simulate active route by managing state internally
-    const [activeTab, setActiveTab] = useState<string>('camera');
-
-    const tabs = [
-        // href is kept for conceptual routes but not used for navigation in this file
-        { id: "dashboard", label: "Home", href: "/dashboard", icon: Home },
-        { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
-        { id: "camera", label: "Camera", href: "/camera", icon: Camera },
-        { id: "settings", label: "Settings", href: "/settings", icon: Settings },
+// --- Bottom Navigation Component (Updated for state-based navigation) ---
+const BottomNavigation: React.FC<{ activeTab: ScreenId; setActiveTab: (id: ScreenId) => void }> = ({ activeTab, setActiveTab }) => {
+    const tabs: { id: ScreenId; label: string; icon: React.ElementType }[] = [
+        { id: "dashboard", label: "Home", icon: Home },
+        { id: "analytics", label: "Analytics", icon: BarChart3 },
+        { id: "camera", label: "Camera", icon: Camera },
+        { id: "settings", label: "Settings", icon: Settings },
     ];
 
     return (
@@ -149,10 +146,9 @@ const BottomNavigation = () => {
                     const isActive = activeTab === tab.id;
                     const Icon = tab.icon;
                     return (
-                        // Used Div/Button instead of Next.js Link
                         <div
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => setActiveTab(tab.id)} // Calls the state updater function from App
                             className={`flex flex-col items-center py-2 px-4 rounded-lg transition-all cursor-pointer ${isActive ? "text-emerald-600 bg-emerald-50" : "text-gray-500 hover:text-gray-700"}`}
                         >
                             <Icon className="w-5 h-5 mb-1" />
@@ -171,6 +167,9 @@ export default function App() {
     const { apiCall } = useApi();
     const [currentTime, setCurrentTime] = useState<Date>(new Date())
 
+    // NEW: State for current screen
+    const [currentScreen, setCurrentScreen] = useState<ScreenId>('camera');
+
     // API-Driven States, initialized to empty or connecting states
     const [plantDetections, setPlantDetections] = useState<PlantDetection[]>([]);
     const [gallerySnapshots, setGallerySnapshots] = useState<Snapshot[]>([]);
@@ -178,7 +177,7 @@ export default function App() {
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     // UI States
-    const [showSettings, setShowSettings] = useState<boolean>(false)
+    const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false) // Renamed to avoid conflict
     const [showGallery, setShowGallery] = useState<boolean>(false)
     const [selectedSnapshot, setSelectedSnapshot] = useState<Snapshot | null>(null)
     const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -310,7 +309,7 @@ export default function App() {
             });
 
             setSettings(updatedSettings); // Update state with the backend's confirmed settings
-            setShowSettings(false);
+            setShowSettingsModal(false);
             showToast("✅ Settings saved successfully!", 'success');
         } catch (error) {
             showToast("Failed to save settings. Connection error.", 'warning');
@@ -341,178 +340,223 @@ export default function App() {
         }
     }
 
+    // --- SCREEN RENDERING LOGIC ---
+    const renderScreenContent = () => {
+        switch (currentScreen) {
+            case 'dashboard':
+                return (
+                    <div className="p-4 text-center bg-white rounded-2xl shadow-xl mt-4">
+                        <Home className="w-8 h-8 mx-auto text-emerald-500 mb-2" />
+                        <h2 className="text-xl font-bold text-gray-800">Dashboard / Home</h2>
+                        <p className="text-gray-500 mt-2">Ipinapakita ang pangkalahatang lagay ng iyong Grow Tower. (API Data summary dito)</p>
+                    </div>
+                );
+            case 'analytics':
+                return (
+                    <div className="p-4 text-center bg-white rounded-2xl shadow-xl mt-4">
+                        <BarChart3 className="w-8 h-8 mx-auto text-blue-500 mb-2" />
+                        <h2 className="text-xl font-bold text-gray-800">Analytics</h2>
+                        <p className="text-gray-500 mt-2">Ipinapakita ang kasaysayan ng paglaki, temperatura, at iba pang graph. (API Historical Data dito)</p>
+                    </div>
+                );
+            case 'settings':
+                // Note: Settings tab navigation automatically opens the modal, but this content is here for completeness.
+                return (
+                    <div className="p-4 text-center bg-white rounded-2xl shadow-xl mt-4">
+                        <Settings className="w-8 h-8 mx-auto text-orange-500 mb-2" />
+                        <h2 className="text-xl font-bold text-gray-800">Device Settings</h2>
+                        <p className="text-gray-500 mt-2">Gamitin ang "Advanced Settings" button upang mabago ang configuration.</p>
+                    </div>
+                );
+            case 'camera':
+            default:
+                // Default is the main Camera Monitor View
+                return (
+                    <>
+                        <h1 className="text-3xl font-extrabold text-gray-800 pt-2">
+                            Camera Monitor
+                        </h1>
+                        <p className="text-gray-500 -mt-3">Real-time surveillance and health analysis for your Kale Tower.</p>
+
+                        {/* Camera Feed */}
+                        <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group shadow-xl">
+                            {/* Zoom Wrapper to apply transformation */}
+                            <div
+                                className="absolute inset-0 transition-transform duration-300 ease-in-out"
+                                style={{ transform: `scale(${zoomLevel})` }}
+                            >
+                                <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
+                                    <div className="text-center text-white">
+                                        <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
+                                        <div className="text-lg font-semibold">Live Kale Tower Feed</div>
+                                        <div className="text-sm opacity-70">AI Plant Detection Active</div>
+                                    </div>
+                                </div>
+
+                                {/* Recording Duration Indicator */}
+                                {isRecording && (
+                                    <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded-xl font-bold text-sm shadow-md backdrop-blur-sm">
+                                        REC {formatDuration(recordingDuration)}
+                                    </div>
+                                )}
+
+                                {/* Live/Recording indicator */}
+                                <div className="absolute top-4 right-4 w-4 h-4 rounded-full shadow-md bg-green-500 animate-pulse"></div>
+
+                                {/* Time and Specs */}
+                                <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
+                                    <div className="text-sm font-semibold font-mono">
+                                        {currentTime.toLocaleTimeString()}
+                                    </div>
+                                    <div className="text-xs text-gray-300">
+                                        {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : 'Live'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Loading Spinner Overlay */}
+                            {isLoading && (
+                                <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center text-white text-xl font-bold backdrop-blur-sm z-10">
+                                    Connecting to Camera... 🔄
+                                </div>
+                            )}
+
+                        </div>
+
+                        {/* Zoom Slider Controls */}
+                        {showZoomControls && (
+                            <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                                <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                                    Zoom Level: <span className="text-purple-600">{zoomLevel.toFixed(1)}x</span>
+                                </h3>
+                                <input
+                                    type="range"
+                                    min="1.0"
+                                    max="4.0"
+                                    step="0.1"
+                                    value={zoomLevel}
+                                    onChange={handleZoomChange}
+                                    className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                                />
+                                <div className="flex justify-between text-sm text-gray-500 mt-2">
+                                    <span>1x (Wide)</span>
+                                    <span>4x (Macro)</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* AI Detection Results */}
+                        <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                            <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                                <span className="text-emerald-500">AI</span> Plant Health Status
+                            </h3>
+                            <div className="space-y-3">
+                                {isLoading ? (
+                                    <p className="text-gray-500 text-sm italic">Loading detection results...</p>
+                                ) : plantDetections.length === 0 ? (
+                                    <p className="text-gray-500 text-sm italic">No plants detected or initialized yet.</p>
+                                ) : (
+                                    plantDetections.map((plant) => (
+                                        <div
+                                            key={plant.id}
+                                            className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
+                                                ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
+                                                : "bg-amber-50 border border-amber-200 hover:shadow-md"
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
+                                                ></div>
+                                                <span className="font-medium text-gray-900">{plant.name}</span>
+                                            </div>
+                                            <span
+                                                className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
+                                            >
+                                                {plant.status}
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Camera Controls */}
+                        <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
+                            <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
+                                Action Center
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => setShowGallery(true)}
+                                    className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                                >
+                                    🖼️ Gallery ({gallerySnapshots.length})
+                                </button>
+                                <button
+                                    onClick={handleSnapshot}
+                                    className="p-4 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                                    disabled={isLoading}
+                                >
+                                    📸 Take Snapshot
+                                </button>
+                                <button
+                                    onClick={handleRecord}
+                                    className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${isRecording
+                                        ? "bg-red-500 hover:bg-red-600 text-white"
+                                        : "bg-blue-100 hover:bg-blue-200 text-blue-700"
+                                        }`}
+                                    disabled={isLoading}
+                                >
+                                    {isRecording ? (
+                                        <span className="inline-flex items-center gap-2">
+                                            <span className="animate-ping inline-block w-3 h-3 bg-white rounded-full"></span>
+                                            STOP ({formatDuration(recordingDuration)})
+                                        </span>
+                                    ) : (
+                                        "🎥 Record"
+                                    )}
+                                </button>
+                                <button
+                                    onClick={handleZoomToggle}
+                                    className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${showZoomControls
+                                        ? "bg-purple-500 hover:bg-purple-600 text-white"
+                                        : "bg-purple-100 hover:bg-purple-200 text-purple-700"
+                                        }`}
+                                >
+                                    🔍 Zoom ({zoomLevel.toFixed(1)}x)
+                                </button>
+                            </div>
+                            <button
+                                onClick={() => setShowSettingsModal(true)} // Note: Changed to setShowSettingsModal
+                                className="w-full mt-3 p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                                disabled={isLoading}
+                            >
+                                ⚙️ Advanced Settings
+                            </button>
+                        </div>
+                    </>
+                );
+        }
+    };
+
+    // --- MAIN RENDER ---
 
     return (
         <div className="min-h-screen bg-gray-50 max-w-md mx-auto">
             <Navbar time={currentTime.toLocaleTimeString()} />
 
             <div className="space-y-5 pb-24 px-4 py-5">
-                <h1 className="text-3xl font-extrabold text-gray-800 pt-2">
-                    Camera Monitor
-                </h1>
-                <p className="text-gray-500 -mt-3">Real-time surveillance and health analysis for your Kale Tower.</p>
-
-                {/* Camera Feed */}
-                <div className="bg-gray-900 rounded-2xl aspect-square relative overflow-hidden group shadow-xl">
-                    {/* Zoom Wrapper to apply transformation */}
-                    <div
-                        className="absolute inset-0 transition-transform duration-300 ease-in-out"
-                        style={{ transform: `scale(${zoomLevel})` }}
-                    >
-                        <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/30 to-teal-900/30 flex items-center justify-center">
-                            <div className="text-center text-white">
-                                <Camera className="w-16 h-16 mx-auto mb-4 opacity-50" />
-                                <div className="text-lg font-semibold">Live Kale Tower Feed</div>
-                                <div className="text-sm opacity-70">AI Plant Detection Active</div>
-                            </div>
-                        </div>
-
-                        {/* Recording Duration Indicator */}
-                        {isRecording && (
-                            <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded-xl font-bold text-sm shadow-md backdrop-blur-sm">
-                                REC {formatDuration(recordingDuration)}
-                            </div>
-                        )}
-
-                        {/* Live/Recording indicator */}
-                        <div className="absolute top-4 right-4 w-4 h-4 rounded-full shadow-md bg-green-500 animate-pulse"></div>
-
-                        {/* Time and Specs */}
-                        <div className="absolute bottom-4 left-4 bg-black/70 px-3 py-2 rounded-lg text-white backdrop-blur-sm">
-                            <div className="text-sm font-semibold font-mono">
-                                {currentTime.toLocaleTimeString()}
-                            </div>
-                            <div className="text-xs text-gray-300">
-                                {settings.resolution} • {settings.fps}fps • {isRecording ? 'Recording' : 'Live'}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Loading Spinner Overlay */}
-                    {isLoading && (
-                        <div className="absolute inset-0 bg-gray-900/80 flex items-center justify-center text-white text-xl font-bold backdrop-blur-sm z-10">
-                            Connecting to Camera... 🔄
-                        </div>
-                    )}
-
-                </div>
-
-                {/* Zoom Slider Controls */}
-                {showZoomControls && (
-                    <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                        <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                            Zoom Level: <span className="text-purple-600">{zoomLevel.toFixed(1)}x</span>
-                        </h3>
-                        <input
-                            type="range"
-                            min="1.0"
-                            max="4.0"
-                            step="0.1"
-                            value={zoomLevel}
-                            onChange={handleZoomChange}
-                            className="w-full h-2 bg-purple-200 rounded-lg appearance-none cursor-pointer accent-purple-600"
-                        />
-                        <div className="flex justify-between text-sm text-gray-500 mt-2">
-                            <span>1x (Wide)</span>
-                            <span>4x (Macro)</span>
-                        </div>
-                    </div>
-                )}
-
-                {/* AI Detection Results */}
-                <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                    <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                        <span className="text-emerald-500">AI</span> Plant Health Status
-                    </h3>
-                    <div className="space-y-3">
-                        {isLoading ? (
-                            <p className="text-gray-500 text-sm italic">Loading detection results...</p>
-                        ) : plantDetections.length === 0 ? (
-                            <p className="text-gray-500 text-sm italic">No plants detected or initialized yet.</p>
-                        ) : (
-                            plantDetections.map((plant) => (
-                                <div
-                                    key={plant.id}
-                                    className={`flex items-center justify-between p-3 rounded-xl transition-shadow ${plant.color === "emerald"
-                                        ? "bg-emerald-50 border border-emerald-200 hover:shadow-md"
-                                        : "bg-amber-50 border border-amber-200 hover:shadow-md"
-                                        }`}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className={`w-3 h-3 rounded-full shadow-inner ${plant.color === "emerald" ? "bg-emerald-500" : "bg-amber-500"}`}
-                                        ></div>
-                                        <span className="font-medium text-gray-900">{plant.name}</span>
-                                    </div>
-                                    <span
-                                        className={`text-xs font-semibold px-2 py-1 rounded-full ${plant.color === "emerald" ? "text-emerald-800 bg-emerald-200" : "text-amber-800 bg-amber-200"}`}
-                                    >
-                                        {plant.status}
-                                    </span>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </div>
-
-                {/* Camera Controls */}
-                <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
-                    <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2">
-                        Action Center
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                        <button
-                            onClick={() => setShowGallery(true)}
-                            className="p-4 bg-emerald-100 hover:bg-emerald-200 rounded-xl font-bold text-emerald-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                        >
-                            🖼️ Gallery ({gallerySnapshots.length})
-                        </button>
-                        <button
-                            onClick={handleSnapshot}
-                            className="p-4 bg-gray-100 hover:bg-gray-200 rounded-xl font-bold text-gray-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                            disabled={isLoading}
-                        >
-                            📸 Take Snapshot
-                        </button>
-                        <button
-                            onClick={handleRecord}
-                            className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${isRecording
-                                ? "bg-red-500 hover:bg-red-600 text-white"
-                                : "bg-blue-100 hover:bg-blue-200 text-blue-700"
-                                }`}
-                            disabled={isLoading}
-                        >
-                            {isRecording ? (
-                                <span className="inline-flex items-center gap-2">
-                                    <span className="animate-ping inline-block w-3 h-3 bg-white rounded-full"></span>
-                                    STOP ({formatDuration(recordingDuration)})
-                                </span>
-                            ) : (
-                                "🎥 Record"
-                            )}
-                        </button>
-                        <button
-                            onClick={handleZoomToggle}
-                            className={`p-4 rounded-xl font-bold transition-all shadow-sm hover:shadow-md active:scale-[0.98] ${showZoomControls
-                                ? "bg-purple-500 hover:bg-purple-600 text-white"
-                                : "bg-purple-100 hover:bg-purple-200 text-purple-700"
-                                }`}
-                        >
-                            🔍 Zoom ({zoomLevel.toFixed(1)}x)
-                        </button>
-                    </div>
-                    <button
-                        onClick={() => setShowSettings(true)}
-                        className="w-full mt-3 p-4 bg-orange-100 hover:bg-orange-200 rounded-xl font-bold text-orange-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                        disabled={isLoading}
-                    >
-                        ⚙️ Advanced Settings
-                    </button>
-                </div>
-
+                {renderScreenContent()}
             </div>
 
-            <BottomNavigation />
+            <BottomNavigation activeTab={currentScreen} setActiveTab={(id) => {
+                setCurrentScreen(id);
+                // Automatically open settings modal if settings tab is clicked
+                if (id === 'settings') {
+                    setShowSettingsModal(true);
+                }
+            }} />
 
             {/* Toast Notification */}
             <Toast
@@ -575,13 +619,13 @@ export default function App() {
                 </div>
             )}
 
-            {/* Settings Modal */}
-            {showSettings && (
+            {/* Settings Modal (showSettingsModal is used here) */}
+            {showSettingsModal && (
                 <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
                         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10 rounded-t-2xl">
                             <h2 className="text-xl font-bold text-gray-900">Camera Settings</h2>
-                            <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full"><X className="w-6 h-6" /></button>
+                            <button onClick={() => setShowSettingsModal(false)} className="text-gray-500 hover:text-red-500 transition-colors p-2 rounded-full"><X className="w-6 h-6" /></button>
                         </div>
                         <div className="p-4 space-y-6">
                             {/* Resolution */}
@@ -597,7 +641,7 @@ export default function App() {
                             {/* Motion Detection Toggle */}
                             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200"><div><div className="font-semibold text-gray-900">Motion Detection</div><div className="text-xs text-gray-500">Alert on movement detection</div></div><label className="relative inline-block w-12 h-6"><input type="checkbox" checked={settings.motionDetection} onChange={(e) => handleSettingChange("motionDetection", e.target.checked)} className="sr-only peer" /><div className="w-12 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-6 peer-checked:bg-emerald-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all"></div></label></div>
                             {/* Save and Close Buttons */}
-                            <div className="space-y-3 pt-2"><button onClick={handleSaveSettings} className="w-full p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors shadow-lg hover:shadow-xl active:scale-[0.99]">Save Settings</button><button onClick={() => setShowSettings(false)} className="w-full p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close</button></div>
+                            <div className="space-y-3 pt-2"><button onClick={handleSaveSettings} className="w-full p-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors shadow-lg hover:shadow-xl active:scale-[0.99]">Save Settings</button><button onClick={() => setShowSettingsModal(false)} className="w-full p-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-xl transition-colors active:scale-[0.99]">Close</button></div>
                         </div>
                     </div>
                 </div>
