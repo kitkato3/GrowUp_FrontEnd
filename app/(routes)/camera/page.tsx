@@ -2,7 +2,8 @@
 
 import { Camera, X, Download, Trash2, Maximize2, Home, BarChart3, Settings } from "lucide-react"
 import React, { useState, useEffect, useCallback } from "react"
-// Removed Next.js imports: Link and usePathname are replaced by local state and Div/Button elements.
+// NOTE: Next.js imports (Link and usePathname) are intentionally NOT imported,
+// as the user's original App.tsx uses state-based client-side routing.
 
 // --- CONFIGURATION ---
 const API_BASE_URL = "http://192.168.1.100:5000/api/v1"; // <<< CRITICAL: CHANGE THIS TO YOUR RASPI 5 IP AND PORT >>>
@@ -14,16 +15,6 @@ interface Snapshot { id: number; date: string; time: string; thumbnail: string; 
 interface SettingsState { resolution: string; fps: number; brightness: number; contrast: number; detectionSensitivity: number; autoFocus: boolean; nightMode: boolean; motionDetection: boolean; }
 interface ToastProps { message: string; visible: boolean; color: 'success' | 'info' | 'warning' | 'default'; onClose: () => void; }
 interface BackendData { detections: PlantDetection[]; snapshots: Snapshot[]; currentSettings: SettingsState; }
-
-
-// --- DETECTION DATA STRUCTURE REFERENCE (HINDI GINAGAMIT BILANG INITIAL MOCK DATA) ---
-const MOCK_DETECTION_REFERENCE: PlantDetection[] = [
-    { id: "k1", name: "Kale #1", status: "Growing", color: "emerald" },
-    { id: "k2", name: "Kale #2", status: "Growing", color: "emerald" },
-    { id: "k3", name: "Kale #3", status: "Growth Alert", color: "amber" },
-    { id: "k4", name: "Kale #4", status: "Growing", color: "emerald" }
-];
-// Ang data na ito ay inaasahang matatanggap mula sa API endpoint /status.
 
 
 // --- INITIAL EMPTY STATES (Used only for component initialization before API call) ---
@@ -50,7 +41,6 @@ const formatDuration = (seconds: number): string => {
     return formatted.startsWith("0") && formatted.length > 2 ? formatted.substring(1) : formatted;
 }
 
-// Simulation function for mock downloads (kept for environment compatibility)
 const simulateDownloadFn = (mimeType: string, filename: string, contentLabel: string, duration?: number): void => {
     let mockContent = `Mock ${contentLabel} data captured at ${new Date().toLocaleString()}.`;
     if (duration) { mockContent += ` Duration: ${formatDuration(duration)}.`; }
@@ -79,11 +69,9 @@ const useApi = () => {
                 ...options,
             });
             if (!response.ok) {
-                // Throw an error with status code and text
                 const errorText = await response.text();
                 throw new Error(`HTTP error! Status: ${response.status}. Message: ${errorText.substring(0, 100)}`);
             }
-            // Attempt to parse JSON, handle 204 No Content
             if (response.status === 204 || response.headers.get('content-length') === '0') {
                 return null;
             }
@@ -130,8 +118,9 @@ const Navbar: React.FC<{ time: string }> = ({ time }) => (
     </div>
 );
 
-// --- Bottom Navigation Component (Updated for state-based navigation) ---
+// --- Bottom Navigation Component (Refined to ensure tabs match the Aquaponics Dashboard) ---
 const BottomNavigation: React.FC<{ activeTab: ScreenId; setActiveTab: (id: ScreenId) => void }> = ({ activeTab, setActiveTab }) => {
+    // These tabs are consistent with the Aquaponics Dashboard's tabs
     const tabs: { id: ScreenId; label: string; icon: React.ElementType }[] = [
         { id: "dashboard", label: "Home", icon: Home },
         { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -167,7 +156,7 @@ export default function App() {
     const { apiCall } = useApi();
     const [currentTime, setCurrentTime] = useState<Date>(new Date())
 
-    // NEW: State for current screen
+    // NEW: State for current screen - Initialized to 'camera' per original logic
     const [currentScreen, setCurrentScreen] = useState<ScreenId>('camera');
 
     // API-Driven States, initialized to empty or connecting states
