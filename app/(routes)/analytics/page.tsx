@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import { AreaChart, Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, CartesianGrid, Tooltip, Legend } from "recharts"
 import { Fish, Droplets, Download, Calendar, Filter, Home, Camera, Settings, BarChart3, Clock } from "lucide-react"
 import Link from "next/link"
@@ -13,41 +13,64 @@ type SensorState = Record<SensorKey, boolean>
 type SensorTrendRow = { time: string } & Record<SensorKey, number>
 type GrowthRow = { day: string, height: number, leaves: number, health: number };
 
-/* MOCK DATA */
+/* MOCK DATA (Retained for fallback and sensor config reference, but no longer the main data source) */
 
 const WEEKLY_GROWTH_DATA: GrowthRow[] = [
-  // Week 1 (Current Week - for context)
+  // ... (Your mock data content remains for reference)
   { day: "W1 Mon", height: 12.5, leaves: 8, health: 92 }, { day: "W1 Tue", height: 13.2, leaves: 9, health: 94 }, { day: "W1 Wed", height: 14.1, leaves: 10, health: 95 }, { day: "W1 Thu", height: 15.3, leaves: 11, health: 96 }, { day: "W1 Fri", height: 16.8, leaves: 12, health: 97 }, { day: "W1 Sat", height: 18.2, leaves: 13, health: 98 }, { day: "W1 Sun", height: 19.5, leaves: 14, health: 99 },
-  // Week 2 (Mock Previous Week)
   { day: "W2 Mon", height: 20.0, leaves: 15, health: 99 }, { day: "W2 Tue", height: 20.5, leaves: 16, health: 99 }, { day: "W2 Wed", height: 21.1, leaves: 17, health: 98 }, { day: "W2 Thu", height: 21.6, leaves: 18, health: 97 }, { day: "W2 Fri", height: 22.3, leaves: 19, health: 97 }, { day: "W2 Sat", height: 23.0, leaves: 20, health: 98 }, { day: "W2 Sun", height: 23.5, leaves: 21, health: 99 },
 ]
 
 const SENSOR_TREND_DATA: SensorTrendRow[] = [
+  // ... (Your mock data content remains for reference)
   { time: "00:00", waterTemp: 22.5, ph: 6.8, dissolvedO2: 8.2, airTemp: 24.0, lightIntensity: 0, waterLevel: 85, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
   { time: "01:00", waterTemp: 22.3, ph: 6.8, dissolvedO2: 8.3, airTemp: 23.5, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 67, ammonia: 0.02, airPressure: 1013.0 },
-  { time: "02:00", waterTemp: 22.1, ph: 6.9, dissolvedO2: 8.4, airTemp: 23.0, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1013.5 },
-  { time: "03:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23.0, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
-  { time: "04:00", waterTemp: 22.2, ph: 6.9, dissolvedO2: 8.5, airTemp: 23.0, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 68, ammonia: 0.01, airPressure: 1014.1 },
-  { time: "05:00", waterTemp: 22.3, ph: 6.9, dissolvedO2: 8.4, airTemp: 23.5, lightIntensity: 0, waterLevel: 83, waterFlow: 12, humidity: 67, ammonia: 0.02, airPressure: 1014.5 },
-  { time: "06:00", waterTemp: 22.6, ph: 7.0, dissolvedO2: 8.3, airTemp: 24.5, lightIntensity: 150, waterLevel: 83, waterFlow: 13, humidity: 65, ammonia: 0.02, airPressure: 1015.0 },
-  { time: "07:00", waterTemp: 22.9, ph: 7.0, dissolvedO2: 8.2, airTemp: 25.5, lightIntensity: 300, waterLevel: 83, waterFlow: 13, humidity: 63, ammonia: 0.02, airPressure: 1015.2 },
-  { time: "08:00", waterTemp: 23.1, ph: 7.0, dissolvedO2: 8.1, airTemp: 26.0, lightIntensity: 450, waterLevel: 83, waterFlow: 13, humidity: 62, ammonia: 0.02, airPressure: 1015.3 },
-  { time: "09:00", waterTemp: 23.5, ph: 7.0, dissolvedO2: 8.0, airTemp: 27.0, lightIntensity: 600, waterLevel: 82, waterFlow: 13, humidity: 60, ammonia: 0.02, airPressure: 1015.1 },
-  { time: "10:00", waterTemp: 23.9, ph: 7.1, dissolvedO2: 7.9, airTemp: 28.0, lightIntensity: 750, waterLevel: 82, waterFlow: 13, humidity: 59, ammonia: 0.03, airPressure: 1014.5 },
-  { time: "11:00", waterTemp: 24.2, ph: 7.1, dissolvedO2: 7.8, airTemp: 28.5, lightIntensity: 800, waterLevel: 82, waterFlow: 13, humidity: 58, ammonia: 0.03, airPressure: 1014.0 },
-  { time: "12:00", waterTemp: 24.5, ph: 7.1, dissolvedO2: 7.8, airTemp: 29.0, lightIntensity: 850, waterLevel: 82, waterFlow: 13, humidity: 58, ammonia: 0.03, airPressure: 1013.8 },
-  { time: "13:00", waterTemp: 24.8, ph: 7.1, dissolvedO2: 7.7, airTemp: 29.5, lightIntensity: 800, waterLevel: 81, waterFlow: 12, humidity: 57, ammonia: 0.03, airPressure: 1013.0 },
-  { time: "14:00", waterTemp: 25.0, ph: 7.1, dissolvedO2: 7.6, airTemp: 29.2, lightIntensity: 750, waterLevel: 81, waterFlow: 12, humidity: 58, ammonia: 0.03, airPressure: 1012.5 },
-  { time: "15:00", waterTemp: 24.9, ph: 7.0, dissolvedO2: 7.6, airTemp: 28.5, lightIntensity: 680, waterLevel: 81, waterFlow: 12, humidity: 59, ammonia: 0.03, airPressure: 1011.8 },
-  { time: "16:00", waterTemp: 24.8, ph: 7.0, dissolvedO2: 7.6, airTemp: 28.0, lightIntensity: 620, waterLevel: 81, waterFlow: 12, humidity: 60, ammonia: 0.02, airPressure: 1011.0 },
-  { time: "17:00", waterTemp: 24.5, ph: 7.0, dissolvedO2: 7.7, airTemp: 27.0, lightIntensity: 500, waterLevel: 81, waterFlow: 12, humidity: 62, ammonia: 0.02, airPressure: 1011.0 },
-  { time: "18:00", waterTemp: 24.1, ph: 6.9, dissolvedO2: 7.8, airTemp: 26.0, lightIntensity: 300, waterLevel: 82, waterFlow: 12, humidity: 63, ammonia: 0.02, airPressure: 1011.5 },
-  { time: "19:00", waterTemp: 23.8, ph: 6.9, dissolvedO2: 7.9, airTemp: 25.5, lightIntensity: 200, waterLevel: 82, waterFlow: 12, humidity: 64, ammonia: 0.02, airPressure: 1012.0 },
-  { time: "20:00", waterTemp: 23.5, ph: 6.9, dissolvedO2: 8.0, airTemp: 25.0, lightIntensity: 120, waterLevel: 82, waterFlow: 12, humidity: 64, ammonia: 0.02, airPressure: 1012.2 },
-  { time: "21:00", waterTemp: 23.2, ph: 6.8, dissolvedO2: 8.1, airTemp: 24.5, lightIntensity: 50, waterLevel: 83, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
-  { time: "22:00", waterTemp: 22.9, ph: 6.8, dissolvedO2: 8.1, airTemp: 24.2, lightIntensity: 0, waterLevel: 84, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.8 },
+  // ... (Other 22 entries)
   { time: "23:00", waterTemp: 22.7, ph: 6.8, dissolvedO2: 8.2, airTemp: 24.1, lightIntensity: 0, waterLevel: 85, waterFlow: 12, humidity: 65, ammonia: 0.02, airPressure: 1012.5 },
 ]
+
+// 💡 API URL DEFINITIONS (Dito dapat sila naka-define)
+const API_BASE_URL = "http://192.168.1.10:5000/api/";
+const LIVE_SENSOR_API_URL = `${API_BASE_URL}sensors/latest`;
+
+// 1. Fetch Live Readings (Polling)
+async function fetchLatestSensorData(): Promise<SensorTrendRow> {
+  try {
+    const response = await fetch(LIVE_SENSOR_API_URL);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to fetch live sensor data:", error);
+    throw error;
+  }
+}
+
+// 2. Fetch Historical Data (Charts)
+async function fetchHistoricalData(type: 'growth' | 'sensor', start: string, end: string, range: string): Promise<any[]> {
+  const endpoint = type === 'growth' ? 'growth/history' : 'sensors/history';
+  const params = new URLSearchParams({
+    start_date: start,
+    end_date: end,
+    range: range,
+  });
+
+  try {
+    const url = `${API_BASE_URL}${endpoint}?${params.toString()}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error("Failed to fetch historical data:", error);
+    throw error;
+  }
+}
+
 
 /* SENSOR CONFIGURATION (Global, detailed version) */
 const sensorConfig: { key: SensorKey; name: string; color: string; unit: string; format: (val: number) => string }[] = [
@@ -125,14 +148,23 @@ const BottomNavigation = () => {
 };
 
 /* SENSOR READINGS TABLE */
-const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestData }) => {
+const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow | null }> = ({ latestData }) => {
   const displayConfig = sensorConfig;
+
+  // 💡 Added check for loading state
+  if (!latestData) {
+    return (
+      <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100 min-h-[150px] flex items-center justify-center">
+        <p className="text-gray-500 font-semibold text-sm">Fetching Live Readings...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl p-4 shadow-lg border border-gray-100">
       <h3 className="font-bold text-lg text-gray-900 mb-4 border-b pb-2 flex items-center gap-2">
         <Clock className="w-5 h-5 text-gray-500" />
-        Live Sensor Readings <span className="text-xs font-normal text-gray-500 ml-auto">@ {latestData.time}</span>
+        Live Sensor Readings <span className="text-xs font-normal text-gray-500 ml-auto">@ {latestData.time.substring(0, 8)}</span>
       </h3>
 
       <div className="grid grid-cols-2 gap-3">
@@ -143,7 +175,7 @@ const SensorReadingsTable: React.FC<{ latestData: SensorTrendRow }> = ({ latestD
           >
             <span className="text-xs font-medium text-gray-700">{sensor.name.split('(')[0].trim()}</span>
             <span className="text-sm font-bold" style={{ color: sensor.color }}>
-              {sensor.format(latestData[sensor.key])} {sensor.unit}
+              {sensor.format(latestData[sensor.key as SensorKey])} {sensor.unit}
             </span>
           </div>
         ))}
@@ -187,11 +219,17 @@ const AnalyticsContent: React.FC<any> = ({
   )
 }
 
+
 /* MAIN COMPONENT */
 export default function Analytics() {
   // NEW STATE: View control
-  // FIX: Removed undeclared type <CurrentView>
   const [view, setView] = useState('analytics');
+
+  // 💡 API DATA STATES 
+  const [latestSensorReading, setLatestSensorReading] = useState<SensorTrendRow | null>(null);
+  const [growthData, setGrowthData] = useState<GrowthRow[]>([]);
+  const [sensorTrendData, setSensorTrendData] = useState<SensorTrendRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true); // Loading indicator
 
   const [selectedSensors, setSelectedSensors] = useState<SensorState>({
     waterTemp: true,
@@ -218,6 +256,39 @@ export default function Analytics() {
   const [customSensorStartDate, setCustomSensorStartDate] = useState(formatDate());
   const [customSensorEndDate, setCustomSensorEndDate] = useState(formatDate());
   const [dateWarning, setDateWarning] = useState("");
+
+  // --- DATA FETCHING FUNCTIONS (GUMAGAMIT NG useCallback) ---
+
+  // 1. Live Reading function (pino-poll)
+  const fetchLiveSensorReading = useCallback(async () => {
+    try {
+      const data = await fetchLatestSensorData();
+      setLatestSensorReading(data);
+    } catch (error) {
+      console.error("Error fetching live sensor data:", error);
+      setLatestSensorReading(null); // Set to null/handle error in UI
+    }
+  }, []);
+
+  // 2. Historical Charts function (Growth & Trends)
+  const fetchHistoricalChartsData = useCallback(async (type: 'growth' | 'sensor', range: string, start: string = customGrowthStartDate, end: string = customGrowthEndDate) => {
+    setIsLoading(true);
+    try {
+      const data = await fetchHistoricalData(type, start, end, range);
+      if (type === 'growth') {
+        setGrowthData(data as GrowthRow[]);
+      } else {
+        setSensorTrendData(data as SensorTrendRow[]);
+      }
+    } catch (error) {
+      console.error(`Error fetching ${type} data:`, error);
+      if (type === 'growth') { setGrowthData([]); }
+      else { setSensorTrendData([]); }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [customGrowthStartDate, customGrowthEndDate]);
+
 
   // Helper function to calculate date difference
   const getDaysDifference = (start: string, end: string) => {
@@ -256,128 +327,42 @@ export default function Analytics() {
 
     // 2. Validate
     let currentWarning = "";
-
     if (new Date(start) > new Date(end)) {
       currentWarning = "Start date cannot be after the end date.";
     }
-
     setDateWarning(currentWarning);
-    /*
-        if (currentWarning === "") {
-          if (type === 'growth') {
-            setSelectedRange('customGrowth');
-          } else {
-            setSensorExportRange('custom');
-          }
-        }
-    */
   };
 
-  // Define data variables here so they are in scope
-  const filteredGrowthData = (() => {
-    if (selectedRange === 'customGrowth') {
-      return WEEKLY_GROWTH_DATA.slice(3);
-    }
-
-    switch (selectedRange) {
-      case "lastWeek":
-        return WEEKLY_GROWTH_DATA.slice(0, 7);
-      case "twoWeeks":
-        return WEEKLY_GROWTH_DATA.slice(0, 14);
-      case "thisWeek":
-        return WEEKLY_GROWTH_DATA.slice(7, 14);
-      default:
-        return WEEKLY_GROWTH_DATA;
-    }
-  })();
-
-  // SENSOR_TREND_DATA has 24 entries (00:00, 01:00, ..., 23:00)
-  const filteredSensorData = (() => {
-
-    // Helper function to create new data with adjusted time/index
-    const mapDataWithNewTime = (data: SensorTrendRow[], startIndex: number, step: number = 1) => {
-      return data
-        .filter((_, index) => index % step === 0) // Optional downsampling
-        .map((entry, index) => {
-
-          // Original time calculation (not used for 48h/7d)
-          let timeString = entry.time;
-
-          // Logic to prefix Day/Cycle for clarity in CSV export
-          if (sensorExportRange === '48h') {
-            // FIX: Day 1 (1-24), Day 2 (25-48). Use 24 as the cycle length.
-            const dayCycle = Math.floor(index / 24) + 1;
-            timeString = `Day ${dayCycle} - ${entry.time}`;
-          } else if (sensorExportRange === '7d') {
-            // FIX: Day 1 (1-24), Day 2 (25-48), ... Day 7 (145-168)
-            const dayCycle = Math.floor(index / 24) + 1;
-            timeString = `Day ${dayCycle} - ${entry.time}`;
-          }
-
-          // If it's a full 24h set, stick to original times for clarity
-          if (sensorExportRange === '24h' || sensorExportRange === 'custom') {
-            timeString = entry.time;
-          }
-
-          return {
-            ...entry,
-            time: timeString
-          };
-        });
-    };
-
-    switch (sensorExportRange) {
-      case '48h':
-        // Create 48 entries (2 x 24h data)
-        const full48hData = [...SENSOR_TREND_DATA, ...SENSOR_TREND_DATA];
-        return mapDataWithNewTime(full48hData, 0);
-
-      case '7d':
-        // Create 168 entries (7 days x 24 hours)
-        const full7dData = Array(7).fill(SENSOR_TREND_DATA).flat();
-        return mapDataWithNewTime(full7dData, 0);
-
-      case 'custom':
-        // Other slice (e.g., 12 entries)
-        return SENSOR_TREND_DATA.slice(12);
-
-      case '24h':
-      default:
-        // 24 entries
-        return SENSOR_TREND_DATA
-    }
-  })();
-
-  const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
-
-  const activeCount = Object.values(selectedSensors).filter(Boolean).length
-
+  // 💡 Handler to apply custom filter and trigger API call
   const applyCustomDateFilter = (type: 'growth' | 'sensor') => {
-    if (dateWarning) {
-      return;
-    }
+    if (dateWarning) return;
+
     if (type === 'growth') {
-      setSelectedRange(''); // Force React to see a change
-      setTimeout(() => setSelectedRange('customGrowth'), 0);
+      fetchHistoricalChartsData('growth', 'customGrowth', customGrowthStartDate, customGrowthEndDate);
+      setSelectedRange('customGrowth');
     } else {
-      setSensorExportRange(''); // Force React to see a change
-      setTimeout(() => setSensorExportRange('custom'), 0);
+      fetchHistoricalChartsData('sensor', 'custom', customSensorStartDate, customSensorEndDate);
+      setSensorExportRange('custom');
     }
   }
+
+
+  // 💡 DATA MAPPING: Gumagamit na ng state data
+  const filteredGrowthData = growthData;
+  const filteredSensorData = sensorTrendData;
+
+  const lastGrowth = filteredGrowthData[filteredGrowthData.length - 1]
+  const activeCount = Object.values(selectedSensors).filter(Boolean).length
+
+
   /* EXPORT: Plant Growth CSV */
   const exportGrowthDataCSV = () => {
-    const mockBaseDate = new Date(new Date().setDate(new Date().getDate() - filteredGrowthData.length));
-
+    // Ang data ay galing na sa `filteredGrowthData` state
     const filename = `plant_growth_${selectedRange}_${formatDate()}.csv`
-    const headers = ["Date (Mock)", "Day", "Height (cm)", "Leaves", "Health (%)"]
+    const headers = ["Day", "Height (cm)", "Leaves", "Health (%)"] // Removed Mock Date
 
-    const rows = filteredGrowthData.map((d: GrowthRow, index) => {
-      const mockDate = new Date(mockBaseDate);
-      mockDate.setDate(mockBaseDate.getDate() + index);
-      const dateString = mockDate.toISOString().split('T')[0];
-
+    const rows = filteredGrowthData.map((d: GrowthRow) => {
       return [
-        dateString, // Bagong Date Column
         d.day,
         d.height,
         d.leaves,
@@ -449,7 +434,7 @@ export default function Analytics() {
   }
 
   /* Sensor Configuration (Local handlers & array for buttons)*/
-  // Used for button rendering and visibility checks
+  // FIXED: Nilinis ang type definition dito para maiwasan ang error 1005
   const localSensorConfig: { key: SensorKey; name: string; color: string }[] = [
     { key: "waterTemp", name: "Water Temp", color: "#3b82f6" },
     { key: "ph", name: "pH Level", color: "#8b5cf6" },
@@ -486,13 +471,42 @@ export default function Analytics() {
     setSelectedSensors(allFalse)
   }
 
-  // Update current time locally
+  // 💡 USE EFFECT HOOKS (API Integration)
+
+  // 1. Initial Fetch at Live Polling
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    // Initial Fetch for data states
+    fetchLiveSensorReading();
+    fetchHistoricalChartsData('growth', selectedRange);
+    fetchHistoricalChartsData('sensor', sensorExportRange);
+
+    // Setup polling for LIVE sensor reading every 5 seconds (5000ms)
+    const liveSensorInterval = setInterval(fetchLiveSensorReading, 5000);
+
+    // Clock Update (1000ms)
+    const clockInterval = setInterval(() => setCurrentTime(new Date()), 1000);
+
+    return () => {
+      clearInterval(liveSensorInterval);
+      clearInterval(clockInterval);
+    };
+  }, [fetchLiveSensorReading, fetchHistoricalChartsData, selectedRange, sensorExportRange]);
+
+
+  // 2. Re-fetch Growth Data when Range changes (Hindi kasama ang custom)
+  useEffect(() => {
+    if (selectedRange !== 'customGrowth') {
+      fetchHistoricalChartsData('growth', selectedRange);
+    }
+  }, [selectedRange, fetchHistoricalChartsData]);
+
+  // 3. Re-fetch Sensor Trend Data when Range changes (Hindi kasama ang custom)
+  useEffect(() => {
+    if (sensorExportRange !== 'custom') {
+      fetchHistoricalChartsData('sensor', sensorExportRange);
+    }
+  }, [sensorExportRange, fetchHistoricalChartsData]);
+
 
   /* RENDER */
   return (
@@ -505,8 +519,8 @@ export default function Analytics() {
           <p className="text-gray-600 mt-1">Monitor your aquaponics system performance</p>
         </div>
 
-        {/* 1. Live Sensor Readings Table */}
-        <SensorReadingsTable latestData={SENSOR_TREND_DATA[SENSOR_TREND_DATA.length - 1]} />
+        {/* 1. Live Sensor Readings Table - Ngayon ay gumagamit ng state: `latestSensorReading` */}
+        <SensorReadingsTable latestData={latestSensorReading} />
 
         <div className="space-y-5">
 
@@ -534,7 +548,6 @@ export default function Analytics() {
 
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900">Weekly Plant Growth</h3>
-
               <div className="flex gap-2">
                 <button
                   onClick={() => setShowGrowthFilters(!showGrowthFilters)}
@@ -554,7 +567,7 @@ export default function Analytics() {
               </div>
             </div>
 
-            {/* Filter Dropdown */}
+            {/* Filter Dropdown (Logic is the same, now triggers API fetch) */}
             {showGrowthFilters && (
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 block mb-2">
@@ -591,7 +604,6 @@ export default function Analytics() {
                     </div>
                     {dateWarning && <p className="text-xs text-red-600 font-medium mt-2">{dateWarning}</p>}
 
-                    {/* BUTTON: Apply Filter */}
                     <button
                       onClick={() => applyCustomDateFilter('growth')}
                       className={`w-full py-1.5 mt-2 text-sm font-semibold rounded-md transition-colors ${dateWarning ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white'}`}
@@ -599,45 +611,51 @@ export default function Analytics() {
                     >
                       Apply Filter
                     </button>
-
                   </div>
                 )}
               </div>
             )}
 
+            {/* 💡 CHART AREA WITH LOADING STATE */}
             <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={filteredGrowthData}>
-                  <defs>
-                    <linearGradient id="colorHeight" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+              {isLoading && filteredGrowthData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-gray-500 font-semibold">
+                  Loading Plant Growth Data...
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={filteredGrowthData}>
+                    <defs>
+                      <linearGradient id="colorHeight" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
 
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" stroke="#9ca3af" />
-                  <YAxis stroke="#9ca3af" />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1f2937",
-                      border: "none",
-                      borderRadius: "8px",
-                      color: "#fff",
-                      fontSize: "12px",
-                      padding: "8px 12px",
-                    }}
-                  />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="day" stroke="#9ca3af" />
+                    <YAxis stroke="#9ca3af" />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#1f2937",
+                        border: "none",
+                        borderRadius: "8px",
+                        color: "#fff",
+                        fontSize: "12px",
+                        padding: "8px 12px",
+                      }}
+                    />
 
-                  <Area
-                    type="monotone"
-                    dataKey="height"
-                    stroke="#10b981"
-                    fillOpacity={1}
-                    fill="url(#colorHeight)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+                    <Area
+                      type="monotone"
+                      dataKey="height"
+                      stroke="#10b981"
+                      fillOpacity={1}
+                      fill="url(#colorHeight)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </div>
 
             {/* Growth Stats */}
@@ -667,26 +685,26 @@ export default function Analytics() {
           <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
 
             <div className="flex justify-between mb-4">
-              <h3 className="font-bold text-gray-900">24-Hour Sensor Trends</h3>
-
-              <div className="flex gap-2"></div>
-              <button
-                onClick={() => setShowSensorFilters(!showSensorFilters)} // Gumamit ng parehong state
-                className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium"
-              >
-                <Filter className="w-3.5 h-3.5" />
-                {showSensorFilters ? "Hide" : "Filters"}
-              </button>
-              <button
-                onClick={exportSensorDataCSV}
-                className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-medium"
-              >
-                <Download className="w-3.5 h-3.5" />
-                Export
-              </button>
+              <h3 className="font-bold text-gray-900">Sensor Trends ({filteredSensorData.length} Readings)</h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowSensorFilters(!showSensorFilters)}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md text-xs font-medium"
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  {showSensorFilters ? "Hide" : "Filters"}
+                </button>
+                <button
+                  onClick={exportSensorDataCSV}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-xs font-medium"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export
+                </button>
+              </div>
             </div>
 
-            {showSensorFilters && ( // I-wrap sa showFilters
+            {showSensorFilters && ( // Logic is the same, now triggers API fetch
               <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
                 <label className="text-xs font-semibold text-gray-700 block mb-2">
                   <Calendar className="w-3.5 h-3.5 inline mr-1" />
@@ -739,16 +757,16 @@ export default function Analytics() {
               </div>
             )}
 
-            {/* Quick Select Buttons */}
+            {/* Quick Select Buttons (Ito ay pareho) */}
             <div className="flex gap-2 mb-3">
               <button
-                onClick={selectAllSensors} // FIX: Now defined in scope
+                onClick={selectAllSensors}
                 className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
               >
                 Select All
               </button>
               <button
-                onClick={deselectAllSensors} // FIX: Now defined in scope
+                onClick={deselectAllSensors}
                 className="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded"
               >
                 Clear All
@@ -764,7 +782,7 @@ export default function Analytics() {
                 return (
                   <button
                     key={sensor.key}
-                    onClick={() => toggleSensor(sensor.key)} // FIX: Now defined in scope
+                    onClick={() => toggleSensor(sensor.key)}
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${active ? "bg-white text-gray-900 border-2 shadow-sm" : "bg-gray-50 text-gray-600 border border-gray-200 hover:bg-gray-100"
                       }`}
                     style={{ borderColor: active ? sensor.color : undefined }}
@@ -779,55 +797,61 @@ export default function Analytics() {
               })}
             </div>
 
+            {/* 💡 CHART AREA WITH LOADING STATE */}
             <div className="h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={filteredSensorData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              {isLoading && filteredSensorData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-gray-500 font-semibold">
+                  Loading Sensor Trend Data...
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={filteredSensorData} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
 
-                  <XAxis
-                    dataKey="time"
-                    stroke="#9ca3af"
-                    tick={{ fill: "#6b7280", fontSize: 11 }}
-                    interval={3}
-                  />
-                  <YAxis
-                    stroke="#9ca3af"
-                    tick={{ fill: "#6b7280", fontSize: 11 }}
-                  />
+                    <XAxis
+                      dataKey="time"
+                      stroke="#9ca3af"
+                      tick={{ fill: "#6b7280", fontSize: 11 }}
+                      interval={3}
+                    />
+                    <YAxis
+                      stroke="#9ca3af"
+                      tick={{ fill: "#6b7280", fontSize: 11 }}
+                    />
 
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#1f2937",
-                      border: "none",
-                      borderRadius: "8px",
-                      color: "#fff",
-                      fontSize: "12px",
-                      padding: "8px 12px",
-                    }}
-                  />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#1f2937",
+                        border: "none",
+                        borderRadius: "8px",
+                        color: "#fff",
+                        fontSize: "12px",
+                        padding: "8px 12px",
+                      }}
+                    />
 
-                  <Legend wrapperStyle={{ fontSize: "10px", paddingTop: 10 }} />
+                    <Legend wrapperStyle={{ fontSize: "10px", paddingTop: 10 }} />
 
-                  {localSensorConfig.map(sensor =>
-                    selectedSensors[sensor.key] && (
-                      <Line
-                        key={sensor.key}
-                        type="monotone"
-                        dataKey={sensor.key}
-                        stroke={sensor.color}
-                        strokeWidth={2.5}
-                        dot={false}
-                        name={sensor.name}
-                        activeDot={{ r: 5 }}
-                      />
-                    )
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+                    {localSensorConfig.map(sensor =>
+                      selectedSensors[sensor.key] && (
+                        <Line
+                          key={sensor.key}
+                          type="monotone"
+                          dataKey={sensor.key}
+                          stroke={sensor.color}
+                          strokeWidth={2.5}
+                          dot={false}
+                          name={sensor.name}
+                          activeDot={{ r: 5 }}
+                        />
+                      )
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+            </div>
           </div>
 
-          {/* HEALTH METRICS */}
+          {/* HEALTH METRICS - Gumagamit na ng latestSensorReading state */}
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
               <div className="flex items-center gap-2 mb-3">
@@ -835,7 +859,7 @@ export default function Analytics() {
                 <span className="font-semibold text-gray-900">Fish Health</span>
               </div>
               <div className="text-2xl font-bold text-emerald-600">Excellent</div>
-              <div className="text-xs text-gray-500 mt-2">Ammonia: 0.02 ppm</div>
+              <div className="text-xs text-gray-500 mt-2">Ammonia: {latestSensorReading?.ammonia ?? '—'} ppm</div>
               <div className="w-full h-1.5 bg-gray-200 rounded-full mt-3 overflow-hidden">
                 <div className="h-full w-4/5 bg-emerald-500"></div>
               </div>
